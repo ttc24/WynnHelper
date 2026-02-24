@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wynncraft Helper</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    :root{
+      --pico-primary: #6d7cff;
+      --pico-primary-hover: #5a66f2;
+      --pico-primary-focus: rgba(109,124,255,.25);
+      --pico-card-border-color: rgba(0,0,0,.10);
+    }
+    body{
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(109,124,255,.18), transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(80,220,255,.12), transparent 55%),
+                  linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,1));
+    }
+    header { padding: 1rem 0 .5rem; }
+    .grid2 { display: grid; grid-template-columns: 460px 1fr; gap: 1rem; align-items: start; }
+    .card {
+      border: 1px solid var(--pico-card-border-color);
+      border-radius: 14px;
+      padding: 1rem;
+      background: rgba(255,255,255,.82);
+      box-shadow: 0 12px 35px rgba(0,0,0,.06);
+      backdrop-filter: blur(8px);
+    }
+    .small { font-size: .9rem; color: rgba(0,0,0,.65); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
+    .row { display:flex; gap:.75rem; flex-wrap: wrap; align-items: end; }
+    .slotRow { display:grid; grid-template-columns: 95px 1fr 62px; gap:.5rem; align-items:center; margin-bottom:.55rem; }
+    .slotRow input { margin:0; }
+    .slotHead { display:flex; justify-content: space-between; align-items:center; margin-bottom:.5rem; }
+    .pillRow { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border:1px solid rgba(0,0,0,.12); border-radius:999px; background: rgba(255,255,255,.75); }
+    .suggest { position:relative; }
+    .suggestList{
+      position:absolute; z-index:50; left:0; right:0; top:calc(100% + 4px);
+      border:1px solid rgba(0,0,0,.12);
+      background: rgba(255,255,255,.98);
+      border-radius:12px;
+      overflow:hidden;
+      max-height:280px;
+      overflow-y:auto;
+      box-shadow:0 18px 40px rgba(0,0,0,.12);
+    }
+    .suggestItem { padding:.55rem .7rem; cursor:pointer; display:flex; justify-content:space-between; gap:.6rem; }
+    .suggestItem:hover, .suggestItem.active { background: rgba(109,124,255,.10); }
+    .badge { font-size:.78rem; padding:.12rem .45rem; border-radius:999px; border:1px solid rgba(0,0,0,.12); background: rgba(255,255,255,.75); }
+    .resultsGrid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .resultItem { border-bottom:1px solid rgba(0,0,0,.10); padding:.6rem .6rem; }
+    .resultItem:last-child { border-bottom:none; }
+    .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
+    .btnTiny { padding:.35rem .55rem; font-size:.86rem; }
+    .mutedBox { border:1px dashed rgba(0,0,0,.18); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.55); }
+    dialog { border:none; border-radius: 16px; padding: 0; width: min(760px, 95vw); }
+    dialog .dwrap { padding: 1rem; }
+    dialog::backdrop { background: rgba(0,0,0,.35); }
+    @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } .resultsGrid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h2 style="margin-bottom:.25rem;">Wynncraft Helper</h2>
+      <p class="small" style="margin-top:0;">
+        Pick items on the left. Get compatible suggestions on the right. Swap mode helps fix broken builds fast.
+      </p>
+    </header>
+
+    <div class="grid2">
+      <section class="card">
+        <div class="slotHead">
+          <h4 style="margin:0;">Player</h4>
+          <button id="refresh" class="btnTiny">Refresh</button>
+        </div>
+
+        <div class="row">
+          <label style="min-width: 120px;">
+            Level
+            <input id="level" type="number" min="1" max="106" value="106" />
+          </label>
+
+          <label style="min-width: 190px;">
+            Class
+            <select id="class">
+              <option value="">(any)</option>
+              <option value="warrior">Warrior</option>
+              <option value="archer">Archer</option>
+              <option value="mage">Mage</option>
+              <option value="assassin">Assassin</option>
+              <option value="shaman">Shaman</option>
+            </select>
+          </label>
+
+          <label style="min-width: 220px;">
+            Extra SP (quests/tomes/etc.)
+            <input id="extraPoints" type="number" min="0" max="999" value="0" />
+          </label>
+
+          <label style="min-width: 220px;">
+            Strict weapon class
+            <select id="strictWeaponClass">
+              <option value="1">Yes</option>
+              <option value="0">No</option>
+            </select>
+          </label>
+        </div>
+
+        <hr/>
+
+        <h4 style="margin-bottom:.5rem;">Mode</h4>
+        <div class="row">
+          <label><input type="radio" name="mode" value="fill" id="modeFill" checked /> Fill missing slots</label>
+          <label><input type="radio" name="mode" value="swap" id="modeSwap" /> Swap one slot</label>
+        </div>
+
+        <div id="swapBox" class="row" style="display:none; margin-top:.35rem;">
+          <label style="min-width: 220px;">
+            Slot to swap
+            <select id="swapKey">
+              <option value="helmet">Helmet</option>
+              <option value="chestplate">Chestplate</option>
+              <option value="leggings">Leggings</option>
+              <option value="boots">Boots</option>
+              <option value="necklace">Necklace</option>
+              <option value="bracelet">Bracelet</option>
+              <option value="ring1">Ring 1</option>
+              <option value="ring2">Ring 2</option>
+              <option value="weapon">Weapon</option>
+            </select>
+          </label>
+          <p class="small" style="margin:0;">In swap mode, everything else is treated as fixed unless you clear it.</p>
+        </div>
+
+        <hr/>
+
+        <div class="slotHead">
+          <h4 style="margin:0;">Gear</h4>
+          <button id="clearAll" class="secondary btnTiny">Clear all</button>
+        </div>
+
+        <p class="small">Tip: click into a slot to see suggestions even before typing.</p>
+        <div id="slots"></div>
+
+        <details style="margin-top:.6rem;">
+          <summary>Advanced filters</summary>
+
+          <div class="row" style="margin-top:.6rem;">
+            <label style="min-width: 180px;">
+              Search mode
+              <select id="searchMode">
+                <option value="contains">Contains</option>
+                <option value="starts">Starts with</option>
+                <option value="fuzzy">Fuzzy</option>
+              </select>
+            </label>
+
+            <label style="min-width: 180px;">
+              Sort
+              <select id="sortBy">
+                <option value="bestRemaining">Best remaining SP</option>
+                <option value="lowestFinalSpend">Lowest final spend</option>
+                <option value="lowestLevel">Lowest level requirement</option>
+                <option value="leastNegative">Least negative tradeoffs</option>
+                <option value="highestSTR">Highest STR bonus</option>
+                <option value="highestDEX">Highest DEX bonus</option>
+                <option value="highestINT">Highest INT bonus</option>
+                <option value="highestDEF">Highest DEF bonus</option>
+                <option value="highestAGI">Highest AGI bonus</option>
+              </select>
+            </label>
+
+            <label style="min-width: 170px;">
+              Min item level
+              <input id="minItemLevel" type="number" min="0" max="106" value="0" />
+            </label>
+
+            <label style="min-width: 160px;">
+              Limit/slot
+              <input id="limit" type="number" min="10" max="500" value="150" />
+            </label>
+          </div>
+
+          <div class="row">
+            <label><input id="noMythic" type="checkbox"/> No mythic</label>
+            <label><input id="noCrafted" type="checkbox"/> No crafted/unidentified (best-effort)</label>
+          </div>
+
+          <div class="row">
+            <label style="min-width: 240px;">
+              Must give + stat
+              <select id="mustGiveStat">
+                <option value="">(none)</option>
+                <option value="strength">STR</option>
+                <option value="dexterity">DEX</option>
+                <option value="intelligence">INT</option>
+                <option value="defence">DEF</option>
+                <option value="agility">AGI</option>
+              </select>
+            </label>
+
+            <label style="min-width: 260px;">
+              Min improvement (Δ remaining SP)
+              <input id="minImprove" type="number" value="0" />
+            </label>
+          </div>
+
+          <div class="small" style="margin-top:.4rem;">Rarities:</div>
+          <div id="rarityBox" class="pillRow" style="margin-top:.4rem;"></div>
+
+          <details style="margin-top:.6rem;">
+            <summary>Debug</summary>
+            <div class="row" style="margin-top:.6rem;">
+              <label><input id="debug" type="checkbox"/> Show why excluded</label>
+              <label style="min-width: 150px;">
+                Debug limit
+                <input id="debugLimit" type="number" min="0" max="200" value="80" />
+              </label>
+              <button id="reloadDb" class="secondary btnTiny">Force DB reload</button>
+            </div>
+          </details>
+        </details>
+      </section>
+
+      <section class="card">
+        <h4 style="margin-bottom:.25rem;">Suggestions</h4>
+
+        <div id="status" class="small mutedBox"></div>
+
+        <div id="alloc" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
+
+        <div id="notes" class="small" style="margin-top:.5rem;"></div>
+
+        <div id="debugBox" class="small" style="margin-top:.5rem;"></div>
+
+        <hr/>
+
+        <div id="results" class="resultsGrid"></div>
+      </section>
+    </div>
+
+    <dialog id="compareDlg">
+      <div class="dwrap">
+        <div class="row" style="justify-content: space-between; align-items:center;">
+          <strong id="cmpTitle"></strong>
+          <button id="cmpClose" class="secondary btnTiny">Close</button>
+        </div>
+        <div id="cmpBody" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
+        <div class="row" style="justify-content:flex-end; margin-top:.8rem;">
+          <button id="cmpSwap" class="btnTiny">Swap</button>
+        </div>
+      </div>
+    </dialog>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+import fs from "node:fs";
+import path from "node:path";
+import { emptyArr } from "./compat.js";
+
+const DB_URL = "https://api.wynncraft.com/v3/item/database?fullResult=";
+const TTL_MS = 55 * 60 * 1000;
+
+function toNumAvg(v) {
+  if (v == null) return 0;
+  if (typeof v === "number") return v;
+  if (typeof v === "object") {
+    if (typeof v.min === "number" && typeof v.max === "number") return Math.round((v.min + v.max) / 2);
+    if (typeof v.raw === "number") return v.raw;
+  }
+  return 0;
+}
+
+function reqArrFromReq(req = {}) {
+  return [
+    Number(req.strength ?? 0),
+    Number(req.dexterity ?? 0),
+    Number(req.intelligence ?? 0),
+    Number(req.defence ?? req.defense ?? 0),
+    Number(req.agility ?? 0),
+  ];
+}
+
+function bonusArrFromIds(ids = {}) {
+  return [
+    toNumAvg(ids.rawStrength),
+    toNumAvg(ids.rawDexterity),
+    toNumAvg(ids.rawIntelligence),
+    toNumAvg(ids.rawDefence ?? ids.rawDefense),
+    toNumAvg(ids.rawAgility),
+  ];
+}
+
+function slotFromItem(it) {
+  if (it.type === "armour" && it.armourType) return it.armourType;        // helmet/chestplate/leggings/boots
+  if ((it.type === "accessory" || it.type === "accessories") && it.accessoryType) return it.accessoryType; // ring/bracelet/necklace
+  if (it.type === "weapon" && it.weaponType) return "weapon";
+  // tomes (schema shows tomes filter exists; types vary in practice) :contentReference[oaicite:1]{index=1}
+  const t = String(it.type ?? "").toLowerCase();
+  const st = String(it.subType ?? "").toLowerCase();
+  if (t.includes("tome") || st.includes("tome")) return "tome";
+  return null;
+}
+
+function classReqFromReq(req = {}) {
+  const v = req.class_requirement ?? req.classRequirement ?? null; // docs show class_requirement :contentReference[oaicite:2]{index=2}
+  if (!v) return null;
+  return String(v).toLowerCase();
+}
+
+function setNameBestEffort(it) {
+  // Not in official schema; keep best-effort if present
+  return it.set ?? it.setName ?? it.set_name ?? null;
+}
+
+export class WynnDb {
+  constructor({ cacheDir }) {
+    this.cacheFile = path.join(cacheDir, ".wynn_item_cache.json");
+    this.norm = null;
+  }
+
+  async load({ force = false } = {}) {
+    if (!force && this.norm) return this.norm;
+
+    const raw = await this.#loadRaw(force);
+    const items = [];
+    const byName = new Map();
+    const bySlot = new Map();
+    const byRarity = new Map();
+    const rarities = new Set();
+
+    for (const [name, it] of Object.entries(raw)) {
+      const slot = slotFromItem(it);
+      if (!slot) continue;
+
+      // we only care about gear+tomes in this app
+      const type = String(it.type ?? "");
+      const rarity = String(it.rarity ?? "unknown");
+      rarities.add(rarity);
+
+      const req = it.requirements ?? {};
+      const levelReq = Number(req.level ?? 0);
+      const reqArr = reqArrFromReq(req);
+      const bonusArr = bonusArrFromIds(it.identifications ?? {});
+
+      // ✅ weapon bonus ignored for build validity; still kept for display
+      const bonusEffArr = slot === "weapon" ? emptyArr() : bonusArr;
+
+      const identifier = Boolean(it.identifier ?? false);         // in schema :contentReference[oaicite:3]{index=3}
+      const allowCraftsman = Boolean(it.allow_craftsman ?? false); // in schema :contentReference[oaicite:4]{index=4}
+
+      const classReq = classReqFromReq(req); // e.g. "warrior" etc.
+      const weaponType = it.weaponType ? String(it.weaponType).toLowerCase() : null;
+
+      const lowerName = name.toLowerCase();
+      const setName = setNameBestEffort(it);
+
+      const norm = {
+        name,
+        lowerName,
+        internalName: it.internalName ?? null,
+        type,
+        subType: it.subType ?? null,
+        slot,
+        rarity,
+        levelReq,
+        reqArr,
+        bonusArr,      // display bonus
+        bonusEffArr,   // math bonus
+        identifier,
+        allowCraftsman,
+        classReq,      // best-effort (many armours are null)
+        weaponType,
+        setName,
+      };
+
+      items.push(norm);
+      byName.set(name, norm);
+
+      if (!bySlot.has(slot)) bySlot.set(slot, []);
+      bySlot.get(slot).push(norm);
+
+      if (!byRarity.has(rarity)) byRarity.set(rarity, []);
+      byRarity.get(rarity).push(norm);
+    }
+
+    for (const arr of bySlot.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
+
+    this.norm = { items, byName, bySlot, byRarity, rarities: Array.from(rarities).sort() };
+    return this.norm;
+  }
+
+  async #loadRaw(force) {
+    if (!force) {
+      try {
+        const st = fs.statSync(this.cacheFile);
+        const age = Date.now() - st.mtimeMs;
+        if (age < TTL_MS) return JSON.parse(fs.readFileSync(this.cacheFile, "utf8"));
+      } catch { /* ignore */ }
+    }
+
+    const res = await fetch(DB_URL, {
+      headers: {
+        accept: "application/json",
+        "user-agent": "wynnhelperv3 (local)",
+      },
+    });
+
+    if (!res.ok) throw new Error(`DB fetch failed: HTTP ${res.status}`);
+
+    const json = await res.json();
+    fs.writeFileSync(this.cacheFile, JSON.stringify(json));
+    return json;
+  }
+}
