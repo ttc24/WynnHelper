@@ -426,7 +426,7 @@ async function refresh() {
       const debugBox = el("debugBox");
 
       const heading = document.createElement("strong");
-      heading.textContent = "Why excluded (sample):";
+      heading.textContent = "Why excluded (total counts + partial samples):";
 
       const details = document.createElement("div");
       details.className = "small mono";

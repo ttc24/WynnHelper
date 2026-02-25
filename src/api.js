@@ -366,6 +366,7 @@ export async function buildApiRouter({ cacheDir }) {
 
     const results = {};
     const debugExcluded = debug ? { counts: {}, samples: [] } : null;
+    const allReasonCounts = debug ? {} : null;
 
     for (const slot of outputSlots) {
       const slotTargetKey = slot === "ring"
@@ -399,6 +400,7 @@ export async function buildApiRouter({ cacheDir }) {
       });
 
       const compatible = [];
+      const reasonCounts = {};
       const excludedSamples = [];
 
       for (const cand of pool) {
@@ -417,6 +419,9 @@ export async function buildApiRouter({ cacheDir }) {
         if (!fail && minImprove != null && deltaRemaining < minImprove) fail = "fails improvement threshold";
 
         if (fail) {
+          if (debug) {
+            reasonCounts[fail] = (reasonCounts[fail] ?? 0) + 1;
+          }
           if (debug && excludedSamples.length < debugLimit) {
             excludedSamples.push({ name: cand.name, reason: fail });
           }
@@ -456,11 +461,18 @@ export async function buildApiRouter({ cacheDir }) {
       results[slot] = compatible.slice(0, limit);
 
       if (debug && debugExcluded) {
-        for (const ex of excludedSamples) {
-          debugExcluded.counts[ex.reason] = (debugExcluded.counts[ex.reason] ?? 0) + 1;
+        for (const [reason, count] of Object.entries(reasonCounts)) {
+          allReasonCounts[reason] = (allReasonCounts[reason] ?? 0) + count;
         }
-        debugExcluded.samples = debugExcluded.samples.concat(excludedSamples.slice(0, 40));
+        const roomLeft = Math.max(0, debugLimit - debugExcluded.samples.length);
+        if (roomLeft > 0) {
+          debugExcluded.samples = debugExcluded.samples.concat(excludedSamples.slice(0, roomLeft));
+        }
       }
+    }
+
+    if (debug && debugExcluded) {
+      debugExcluded.counts = allReasonCounts;
     }
 
     const response = {
