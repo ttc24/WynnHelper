@@ -46,6 +46,23 @@ function weaponTypeForClass(cls) {
   return m[cls] ?? null;
 }
 
+function parseBool(value, fallback) {
+  if (value == null) return fallback;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return fallback;
+  }
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true" || normalized === "1") return true;
+    if (normalized === "false" || normalized === "0") return false;
+    return fallback;
+  }
+  return fallback;
+}
+
 function passesFilters(it, ctx) {
   if (it.levelReq > ctx.level) return false;
 
@@ -185,17 +202,17 @@ export async function buildApiRouter({ cacheDir }) {
     const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
 
-    const strictWeaponClass = Boolean(body.strictWeaponClass ?? true);
+    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
 
     const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
 
-    const noMythic = Boolean(body.noMythic ?? false);
-    const noCraftedBestEffort = Boolean(body.noCraftedBestEffort ?? false);
+    const noMythic = parseBool(body.noMythic, false);
+    const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
 
-    const noNegativeItemSkillBonuses = Boolean(body.noNegativeItemSkillBonuses ?? false);
-    const noNegativeNetSkillBonuses = Boolean(body.noNegativeNetSkillBonuses ?? false);
+    const noNegativeItemSkillBonuses = parseBool(body.noNegativeItemSkillBonuses, false);
+    const noNegativeNetSkillBonuses = parseBool(body.noNegativeNetSkillBonuses, false);
 
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
@@ -204,7 +221,7 @@ export async function buildApiRouter({ cacheDir }) {
 
     const sortBy = String(body.sortBy ?? "bestRemaining"); // bestRemaining | lowestFinalSpend | lowestLevel | highestSTR... | leastNegative
 
-    const debug = Boolean(body.debug ?? false);
+    const debug = parseBool(body.debug, false);
     const debugLimit = Math.max(0, Math.min(200, Math.floor(Number(body.debugLimit ?? 80))));
 
     const limit = Math.max(10, Math.min(500, Math.floor(Number(body.limit ?? 150))));
@@ -433,14 +450,14 @@ export async function buildApiRouter({ cacheDir }) {
     const level = Math.max(1, Math.floor(Number(body.level ?? 106)));
     const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
-    const strictWeaponClass = Boolean(body.strictWeaponClass ?? true);
+    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
     const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
-    const noMythic = Boolean(body.noMythic ?? false);
-    const noCraftedBestEffort = Boolean(body.noCraftedBestEffort ?? false);
-    const noNegativeItemSkillBonuses = Boolean(body.noNegativeItemSkillBonuses ?? false);
-    const noNegativeNetSkillBonuses = Boolean(body.noNegativeNetSkillBonuses ?? false);
+    const noMythic = parseBool(body.noMythic, false);
+    const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
+    const noNegativeItemSkillBonuses = parseBool(body.noNegativeItemSkillBonuses, false);
+    const noNegativeNetSkillBonuses = parseBool(body.noNegativeNetSkillBonuses, false);
 
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
@@ -495,17 +512,17 @@ export async function buildApiRouter({ cacheDir }) {
     const level = Math.max(1, Math.floor(Number(body.level ?? 106)));
     const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
-    const strictWeaponClass = Boolean(body.strictWeaponClass ?? true);
+    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
     const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
 
-    const noMythic = Boolean(body.noMythic ?? false);
-    const noCraftedBestEffort = Boolean(body.noCraftedBestEffort ?? false);
+    const noMythic = parseBool(body.noMythic, false);
+    const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
 
-    const noNegativeItemSkillBonuses = Boolean(body.noNegativeItemSkillBonuses ?? false);
-    const noNegativeNetSkillBonuses = Boolean(body.noNegativeNetSkillBonuses ?? false);
+    const noNegativeItemSkillBonuses = parseBool(body.noNegativeItemSkillBonuses, false);
+    const noNegativeNetSkillBonuses = parseBool(body.noNegativeNetSkillBonuses, false);
 
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
