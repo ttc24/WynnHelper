@@ -35,7 +35,7 @@
     .small { font-size: .9rem; color: var(--text-soft); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
     .row { display:flex; gap:.75rem; flex-wrap: wrap; align-items: end; }
-    .slotRow { display:grid; grid-template-columns: 95px 1fr 62px; gap:.5rem; align-items:center; margin-bottom:.55rem; }
+    .slotRow { display:grid; grid-template-columns: 95px minmax(0,1fr) auto; gap:.5rem; align-items:center; margin-bottom:.55rem; }
     .slotRow input { margin:0; }
     .slotHead { display:flex; justify-content: space-between; align-items:center; margin-bottom:.5rem; }
     .pillRow { display:flex; flex-wrap:wrap; gap:.4rem; }
@@ -77,7 +77,7 @@
     .resultItem { border-bottom:1px solid rgba(255,255,255,.10); padding:.6rem .6rem; }
     .resultItem:last-child { border-bottom:none; }
     .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
-    .btnTiny { padding:.35rem .55rem; font-size:.86rem; }
+    .btnTiny { padding:.35rem .55rem; font-size:.86rem; white-space: nowrap; min-width: 72px; }
     .resultTop .btnTiny:disabled {
       opacity: .5;
       cursor: not-allowed;
@@ -90,7 +90,12 @@
     input, select, textarea { background: var(--surface-3) !important; color: #eef2ff !important; border-color: rgba(255,255,255,.18) !important; }
     summary { color: #eff3ff; }
     .slotMeta { margin-bottom: .3rem; display:flex; gap:.5rem; flex-wrap: wrap; }
-    @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } .resultsGrid { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) {
+      .grid2 { grid-template-columns: 1fr; }
+      .resultsGrid { grid-template-columns: 1fr; }
+      .slotRow { grid-template-columns: 88px minmax(0,1fr) auto; gap:.4rem; }
+      .btnTiny { min-width: 68px; }
+    }
   </style>
 </head>
 <body>
