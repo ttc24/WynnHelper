@@ -63,6 +63,31 @@ function parseBool(value, fallback) {
   return fallback;
 }
 
+function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
+  if (!targetSlot) return null;
+  if (targetSlot !== "ring") return targetSlot;
+
+  const ringKeys = ["ring1", "ring2"];
+  if (ringKeys.includes(requestedKey)) return requestedKey;
+
+  for (const key of ringKeys) {
+    if (selectedItemsByKey[key] && !Boolean(locks[key])) return key;
+  }
+
+  for (const key of ringKeys) {
+    if (!Boolean(locks[key])) return key;
+  }
+
+  return "ring1";
+}
+
+function isTargetEntry(slotEntry, targetSlot, targetKey) {
+  if (!targetSlot) return false;
+  if (slotEntry.slot !== targetSlot) return false;
+  if (targetSlot !== "ring") return true;
+  return slotEntry.key === targetKey;
+}
+
 function passesFilters(it, ctx) {
   if (it.levelReq > ctx.level) return false;
 
@@ -97,7 +122,7 @@ function passesFilters(it, ctx) {
   return true;
 }
 
-function reasonFails(it, ctx, baseItems, candidateItems) {
+function reasonFails(it, ctx, baseItems, candidateItems, baselineSpend = null) {
   // ordered reasons
   if (it.levelReq > ctx.level) return "fails level";
   if (ctx.minItemLevel != null && it.levelReq < ctx.minItemLevel) return "fails min level";
@@ -123,7 +148,7 @@ function reasonFails(it, ctx, baseItems, candidateItems) {
 
   // improvement requirement
   if (ctx.minImprove != null) {
-    const baseSpend = minFinalSpend(baseItems);
+    const baseSpend = baselineSpend ?? minFinalSpend(baseItems);
     const testSpend = st.finalSpend;
     const improve = (ctx.budget - testSpend) - (ctx.budget - baseSpend); // delta remaining
     if (improve < ctx.minImprove) return "fails improvement threshold";
@@ -228,6 +253,7 @@ export async function buildApiRouter({ cacheDir }) {
     const limit = Math.max(10, Math.min(500, Math.floor(Number(body.limit ?? 150))));
 
     const targetSlot = String(body.targetSlot ?? ""); // single slot to search (recommended)
+    const requestedTargetSlotKey = String(body.targetSlotKey ?? "").trim();
     const selected = body.selected ?? {};
     const locks = body.locks ?? {}; // per slotKey boolean
     const tomesSelected = Array.isArray(body.tomes) ? body.tomes.map(String) : [];
@@ -244,10 +270,6 @@ export async function buildApiRouter({ cacheDir }) {
       noNegativeItemSkillBonuses, noNegativeNetSkillBonuses,
       mustGiveStat, minImprove
     };
-
-    const cacheKey = stableKey({ ctx, selected, locks, tomesSelected, targetSlot, sortBy, limit, debug, debugLimit });
-    const cached = cache.get(cacheKey);
-    if (cached) return res.json(cached);
 
     const notes = [];
     notes.push("Weapon skill bonuses are ignored for build validity (weapon requirements still apply).");
@@ -267,6 +289,12 @@ export async function buildApiRouter({ cacheDir }) {
       usedNames.add(it.name);
     }
 
+    const resolvedTargetSlotKey = targetSlotKey(targetSlot, requestedTargetSlotKey, selectedItemsByKey, locks);
+
+    const cacheKey = stableKey({ ctx, selected, locks, tomesSelected, targetSlot, targetSlotKey: resolvedTargetSlotKey, sortBy, limit, debug, debugLimit });
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     // tomes
     const tomeItems = [];
     for (const tName of tomesSelected) {
@@ -285,7 +313,7 @@ export async function buildApiRouter({ cacheDir }) {
       if (!it) continue;
 
       const isLocked = Boolean(locks[s.key]);
-      const isTarget = targetSlot && (s.slot === targetSlot);
+      const isTarget = isTargetEntry(s, targetSlot, resolvedTargetSlotKey);
       if (isLocked || !isTarget) fixed.push(it);
       // else: item in target slot is replaceable, so we drop it from fixed
     }
@@ -298,15 +326,13 @@ export async function buildApiRouter({ cacheDir }) {
     if (targetSlot) {
       // pick current target item (if any) to define baseline remaining for delta compare
       const curTargets = GEAR_SLOT_KEYS
-        .filter((s) => s.slot === targetSlot)
+        .filter((s) => isTargetEntry(s, targetSlot, resolvedTargetSlotKey))
         .map((s) => selectedItemsByKey[s.key])
         .filter(Boolean);
 
       if (curTargets.length) {
-        // For ring target: baseline uses both rings that were selected but not locked? Here target slot replaces “one slot”
-        // We define baseline as fixed + all currently selected in target slot that are NOT locked.
         const addable = [];
-        for (const s of GEAR_SLOT_KEYS.filter((x) => x.slot === targetSlot)) {
+        for (const s of GEAR_SLOT_KEYS.filter((x) => isTargetEntry(x, targetSlot, resolvedTargetSlotKey))) {
           const it = selectedItemsByKey[s.key];
           if (!it) continue;
           if (Boolean(locks[s.key])) continue;
@@ -443,6 +469,7 @@ export async function buildApiRouter({ cacheDir }) {
     const body = req.body ?? {};
     const itemName = String(body.itemName ?? "").trim();
     const targetSlot = String(body.targetSlot ?? "").trim();
+    const requestedTargetSlotKey = String(body.targetSlotKey ?? "").trim();
     const selected = body.selected ?? {};
     const locks = body.locks ?? {};
     const tomesSelected = Array.isArray(body.tomes) ? body.tomes.map(String) : [];
@@ -493,17 +520,29 @@ export async function buildApiRouter({ cacheDir }) {
       }
     }
 
+    const resolvedTargetSlotKey = targetSlotKey(targetSlot, requestedTargetSlotKey, selectedItemsByKey, locks);
+
     let fixed = [];
     for (const s of GEAR_SLOT_KEYS) {
       const it = selectedItemsByKey[s.key];
       if (!it) continue;
       const isLocked = Boolean(locks[s.key]);
-      const isTarget = targetSlot && (s.slot === targetSlot);
+      const isTarget = isTargetEntry(s, targetSlot, resolvedTargetSlotKey);
       if (isLocked || !isTarget) fixed.push(it);
     }
     fixed = fixed.concat(tomeItems);
 
-    const reason = reasonFails(cand, ctx, fixed, [cand]);
+    let baseline = fixed.slice();
+    for (const s of GEAR_SLOT_KEYS.filter((x) => isTargetEntry(x, targetSlot, resolvedTargetSlotKey))) {
+      const it = selectedItemsByKey[s.key];
+      if (!it) continue;
+      if (Boolean(locks[s.key])) continue;
+      baseline.push(it);
+      break;
+    }
+    const baselineStats = computeBuildStats(baseline, budget, { perSkillCap: 100 });
+
+    const reason = reasonFails(cand, ctx, fixed, [cand], baselineStats.finalSpend);
     res.json({ ok: true, item: cand.name, passes: reason == null, reason });
   });
 
