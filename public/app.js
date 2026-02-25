@@ -14,6 +14,18 @@ const slotKeys = [
 
 const el = (id) => document.getElementById(id);
 
+function setVisible(node, visible, displayValue = "") {
+  if (!node) return;
+  node.classList.toggle("isHidden", !visible);
+  if (displayValue) node.style.display = visible ? displayValue : "none";
+}
+
+function isVisible(node) {
+  if (!node) return false;
+  if (node.classList.contains("isHidden")) return false;
+  return node.style.display !== "none";
+}
+
 let refreshSeq = 0;
 let refreshTimer = null;
 
@@ -164,7 +176,7 @@ function deriveTargetSlotKey(targetSlot = deriveTargetSlot()) {
 
 function syncModeUI() {
   const swapMode = getMode() === "swap";
-  el("swapBox").style.display = swapMode ? "flex" : "none";
+  setVisible(el("swapBox"), swapMode, "flex");
 }
 
 function setText(id, text) {
@@ -242,6 +254,7 @@ function renderRarities() {
 
 function renderTomes() {
   const root = el("tomePills");
+  if (!root) return;
   root.innerHTML = "";
   for (const t of state.tomes) {
     const lab = document.createElement("span");
@@ -333,7 +346,7 @@ function renderSlots() {
     let inflightController = null;
 
     const closeList = () => {
-      list.style.display = "none";
+      setVisible(list, false, "block");
       list.classList.remove("loading", "error");
       activeIdx = -1;
       lastItems = [];
@@ -346,7 +359,7 @@ function renderSlots() {
       if (cls) statusRow.classList.add(cls);
       statusRow.textContent = text;
       list.appendChild(statusRow);
-      list.style.display = "block";
+      setVisible(list, true, "block");
     };
 
     async function doSearch() {
@@ -393,7 +406,7 @@ function renderSlots() {
           list.appendChild(div);
         }
 
-        list.style.display = lastItems.length ? "block" : "none";
+        setVisible(list, Boolean(lastItems.length), "block");
       } catch (err) {
         if (seq !== requestSeq) return;
         if (err?.name === "AbortError") return;
@@ -421,7 +434,7 @@ function renderSlots() {
     // keyboard navigation
     input.addEventListener("keydown", (e) => {
       if (latestResultSeq !== requestSeq) return;
-      if (list.style.display !== "block") return;
+      if (!isVisible(list)) return;
       const items = Array.from(list.querySelectorAll(".suggestItem"));
       if (!items.length) return;
 
@@ -476,9 +489,12 @@ async function refresh() {
     setText("statusQuick", "");
     setText("alloc", "");
     setText("setSynergy", "");
-    el("results").innerHTML = "";
-    el("notes").innerHTML = "";
-    el("debugBox").innerHTML = "";
+    const resultsEl = el("results");
+    const notesEl = el("notes");
+    const debugEl = el("debugBox");
+    if (resultsEl) resultsEl.innerHTML = "";
+    if (notesEl) notesEl.innerHTML = "";
+    if (debugEl) debugEl.innerHTML = "";
 
     const payload = gatherPayload();
     const json = await apiJson("/api/compatible", {
@@ -517,12 +533,14 @@ async function refresh() {
     }
 
     // notes
-    const notesEl = el("notes");
-    notesEl.innerHTML = "";
-    for (const n of (json.notes || [])) {
-      const noteLine = document.createElement("div");
-      noteLine.textContent = `• ${n}`;
-      notesEl.appendChild(noteLine);
+    const notesContainer = el("notes");
+    if (notesContainer) {
+      notesContainer.innerHTML = "";
+      for (const n of (json.notes || [])) {
+        const noteLine = document.createElement("div");
+        noteLine.textContent = `• ${n}`;
+        notesContainer.appendChild(noteLine);
+      }
     }
 
     // debug excluded
@@ -532,6 +550,7 @@ async function refresh() {
       const sample = (json.debugExcluded.samples || []).slice(0, 25).map((x) => `- ${x.name}: ${x.reason}`).join("\n");
 
       const debugBox = el("debugBox");
+      if (!debugBox) return;
 
       const heading = document.createElement("strong");
       heading.textContent = "Why excluded (total counts + partial samples):";
@@ -566,6 +585,7 @@ function scheduleRefresh(delay = 140) {
 
 function renderResults(results, targetSlot, targetSlotKey = "") {
   const root = el("results");
+  if (!root) return;
   root.innerHTML = "";
 
   const slots = Object.keys(results || {});
@@ -698,14 +718,19 @@ Remaining SP: ${candidate.remainingAfter}
 }
 
 function wireCompareDialog() {
-  el("cmpClose").addEventListener("click", () => el("compareDlg").close());
-  el("cmpSwap").addEventListener("click", () => {
+  const closeBtn = el("cmpClose");
+  const swapBtn = el("cmpSwap");
+  const dlg = el("compareDlg");
+  if (!closeBtn || !swapBtn || !dlg) return;
+
+  closeBtn.addEventListener("click", () => dlg.close());
+  swapBtn.addEventListener("click", () => {
     const c = state.compare;
     if (c?.slotKey && c?.candidateName) {
       const slot = slotKeys.find((s) => s.key === c.slotKey)?.slot || c.slotKey;
       swapIntoTarget(slot, c.candidateName, c.slotKey);
     }
-    el("compareDlg").close();
+    dlg.close();
   });
 }
 
@@ -716,7 +741,13 @@ function wireTomeSearch() {
   let activeIdx = -1;
   let lastItems = [];
 
-  const close = () => { list.style.display = "none"; activeIdx = -1; lastItems = []; };
+  if (!input || !list) return;
+
+  const close = () => {
+    setVisible(list, false, "block");
+    activeIdx = -1;
+    lastItems = [];
+  };
 
   async function doSearch() {
     const q = input.value.trim();
@@ -752,7 +783,7 @@ function wireTomeSearch() {
       list.appendChild(div);
     }
 
-    list.style.display = lastItems.length ? "block" : "none";
+    setVisible(list, Boolean(lastItems.length), "block");
   }
 
   let t = null;
@@ -764,7 +795,7 @@ function wireTomeSearch() {
   input.addEventListener("blur", () => setTimeout(close, 120));
 
   input.addEventListener("keydown", (e) => {
-    if (list.style.display !== "block") return;
+    if (!isVisible(list)) return;
     const items = Array.from(list.querySelectorAll(".suggestItem"));
     if (!items.length) return;
 
@@ -787,7 +818,7 @@ function wireTomeSearch() {
     if (items[activeIdx]) items[activeIdx].classList.add("active");
   });
 
-  el("clearTomes").addEventListener("click", () => {
+  el("clearTomes")?.addEventListener("click", () => {
     state.tomes = [];
     renderTomes();
     refresh();
@@ -799,14 +830,14 @@ function wireControls() {
     "class","strictWeaponClass","searchMode","sortBy",
     "noMythic","noCrafted","noNegItem","noNegNet","debug"
   ];
-  for (const id of immediateRefreshers) el(id).addEventListener("change", refresh);
+  for (const id of immediateRefreshers) el(id)?.addEventListener("change", refresh);
 
   const debouncedRefreshers = [
     "level","extraPoints","minItemLevel","limit","mustGiveStat","minImprove","debugLimit"
   ];
   for (const id of debouncedRefreshers) {
-    el(id).addEventListener("input", () => scheduleRefresh());
-    el(id).addEventListener("change", () => scheduleRefresh(0));
+    el(id)?.addEventListener("input", () => scheduleRefresh());
+    el(id)?.addEventListener("change", () => scheduleRefresh(0));
   }
 
   const onModeChange = () => {
@@ -814,13 +845,13 @@ function wireControls() {
     refresh();
   };
 
-  el("modeFill").addEventListener("change", onModeChange);
-  el("modeSwap").addEventListener("change", onModeChange);
-  el("swapKey").addEventListener("change", () => {
+  el("modeFill")?.addEventListener("change", onModeChange);
+  el("modeSwap")?.addEventListener("change", onModeChange);
+  el("swapKey")?.addEventListener("change", () => {
     if (getMode() === "swap") refresh();
   });
 
-  el("refresh").addEventListener("click", async () => {
+  el("refresh")?.addEventListener("click", async () => {
     if (!state.healthReady) {
       const ok = await retryHealthLoad();
       if (!ok) return;
@@ -828,14 +859,14 @@ function wireControls() {
     refresh();
   });
 
-  el("clearAll").addEventListener("click", () => {
+  el("clearAll")?.addEventListener("click", () => {
     state.selected = {};
     state.locks = {};
     renderSlots();
     refresh();
   });
 
-  el("reloadDb").addEventListener("click", async () => {
+  el("reloadDb")?.addEventListener("click", async () => {
     try {
       await apiJson("/api/reload", { method: "POST" });
       const ok = await retryHealthLoad();
@@ -846,9 +877,9 @@ function wireControls() {
     }
   });
 
-  el("explainBtn").addEventListener("click", explainItem);
+  el("explainBtn")?.addEventListener("click", explainItem);
 
-  el("solve").addEventListener("click", solveBuild);
+  el("solve")?.addEventListener("click", solveBuild);
 }
 
 async function explainItem() {
