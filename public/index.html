@@ -7,15 +7,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
     :root{
-      --pico-primary: #6d7cff;
-      --pico-primary-hover: #5a66f2;
-      --pico-primary-focus: rgba(109,124,255,.25);
-      --pico-card-border-color: rgba(0,0,0,.10);
+      --pico-primary: #8f98ff;
+      --pico-primary-hover: #7f89ff;
+      --pico-primary-focus: rgba(143,152,255,.35);
+      --pico-card-border-color: rgba(255,255,255,.12);
+      --text-soft: rgba(235,241,255,.72);
+      --surface-1: rgba(17,21,35,.86);
+      --surface-2: rgba(10,13,24,.95);
+      --surface-3: rgba(26,33,51,.88);
     }
     body{
-      background: radial-gradient(1200px 600px at 20% -10%, rgba(109,124,255,.18), transparent 60%),
-                  radial-gradient(900px 500px at 90% 0%, rgba(80,220,255,.12), transparent 55%),
-                  linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,1));
+      color: #e8edff;
+      background: radial-gradient(1200px 600px at 20% -10%, rgba(95,118,255,.34), transparent 60%),
+                  radial-gradient(900px 500px at 90% 0%, rgba(74,166,226,.20), transparent 55%),
+                  linear-gradient(180deg, rgba(9,12,22,1), rgba(6,8,16,1));
     }
     header { padding: 1rem 0 .5rem; }
     .grid2 { display: grid; grid-template-columns: 460px 1fr; gap: 1rem; align-items: start; }
@@ -23,41 +28,44 @@
       border: 1px solid var(--pico-card-border-color);
       border-radius: 14px;
       padding: 1rem;
-      background: rgba(255,255,255,.82);
-      box-shadow: 0 12px 35px rgba(0,0,0,.06);
+      background: var(--surface-1);
+      box-shadow: 0 14px 40px rgba(0,0,0,.36);
       backdrop-filter: blur(8px);
     }
-    .small { font-size: .9rem; color: rgba(0,0,0,.65); }
+    .small { font-size: .9rem; color: var(--text-soft); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
     .row { display:flex; gap:.75rem; flex-wrap: wrap; align-items: end; }
     .slotRow { display:grid; grid-template-columns: 95px 1fr 62px; gap:.5rem; align-items:center; margin-bottom:.55rem; }
     .slotRow input { margin:0; }
     .slotHead { display:flex; justify-content: space-between; align-items:center; margin-bottom:.5rem; }
     .pillRow { display:flex; flex-wrap:wrap; gap:.4rem; }
-    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border:1px solid rgba(0,0,0,.12); border-radius:999px; background: rgba(255,255,255,.75); }
+    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border:1px solid rgba(255,255,255,.16); border-radius:999px; background: rgba(255,255,255,.07); }
     .suggest { position:relative; }
     .suggestList{
       position:absolute; z-index:50; left:0; right:0; top:calc(100% + 4px);
-      border:1px solid rgba(0,0,0,.12);
-      background: rgba(255,255,255,.98);
+      border:1px solid rgba(255,255,255,.12);
+      background: var(--surface-2);
       border-radius:12px;
       overflow:hidden;
       max-height:280px;
       overflow-y:auto;
-      box-shadow:0 18px 40px rgba(0,0,0,.12);
+      box-shadow:0 18px 40px rgba(0,0,0,.35);
     }
     .suggestItem { padding:.55rem .7rem; cursor:pointer; display:flex; justify-content:space-between; gap:.6rem; }
     .suggestItem:hover, .suggestItem.active { background: rgba(109,124,255,.10); }
-    .badge { font-size:.78rem; padding:.12rem .45rem; border-radius:999px; border:1px solid rgba(0,0,0,.12); background: rgba(255,255,255,.75); }
+    .badge { font-size:.78rem; padding:.12rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.09); }
     .resultsGrid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-    .resultItem { border-bottom:1px solid rgba(0,0,0,.10); padding:.6rem .6rem; }
+    .resultItem { border-bottom:1px solid rgba(255,255,255,.10); padding:.6rem .6rem; }
     .resultItem:last-child { border-bottom:none; }
     .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
     .btnTiny { padding:.35rem .55rem; font-size:.86rem; }
-    .mutedBox { border:1px dashed rgba(0,0,0,.18); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.55); }
+    .mutedBox { border:1px dashed rgba(255,255,255,.20); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.05); }
     dialog { border:none; border-radius: 16px; padding: 0; width: min(760px, 95vw); }
     dialog .dwrap { padding: 1rem; }
-    dialog::backdrop { background: rgba(0,0,0,.35); }
+    dialog::backdrop { background: rgba(0,0,0,.55); }
+    input, select, textarea { background: var(--surface-3) !important; color: #eef2ff !important; border-color: rgba(255,255,255,.18) !important; }
+    summary { color: #eff3ff; }
+    .slotMeta { margin-bottom: .3rem; display:flex; gap:.5rem; flex-wrap: wrap; }
     @media (max-width: 1100px) { .grid2 { grid-template-columns: 1fr; } .resultsGrid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -187,6 +195,8 @@
           <div class="row">
             <label><input id="noMythic" type="checkbox"/> No mythic</label>
             <label><input id="noCrafted" type="checkbox"/> No crafted/unidentified (best-effort)</label>
+            <label><input id="noNegItem" type="checkbox"/> No negative item bonuses</label>
+            <label><input id="noNegNet" type="checkbox"/> No negative net bonuses</label>
           </div>
 
           <div class="row">
@@ -232,6 +242,8 @@
 
         <div id="alloc" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
 
+        <div id="setSynergy" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
+
         <div id="notes" class="small" style="margin-top:.5rem;"></div>
 
         <div id="debugBox" class="small" style="margin-top:.5rem;"></div>
@@ -239,6 +251,31 @@
         <hr/>
 
         <div id="results" class="resultsGrid"></div>
+
+        <hr/>
+
+        <h4 style="margin-bottom:.35rem;">Tomes</h4>
+        <div class="suggest" style="margin-bottom:.5rem;">
+          <input id="tomeInput" placeholder="Search tomes..." autocomplete="off" />
+          <div id="tomeList" class="suggestList" style="display:none;"></div>
+        </div>
+        <div class="row" style="margin-bottom:.5rem;">
+          <button id="clearTomes" class="secondary btnTiny">Clear tomes</button>
+        </div>
+        <div id="tomePills" class="pillRow"></div>
+
+        <hr/>
+
+        <h4 style="margin-bottom:.35rem;">Tools</h4>
+        <div class="row">
+          <label style="min-width: 260px;">
+            Explain item
+            <input id="explainName" placeholder="Exact item name" />
+          </label>
+          <button id="explainBtn" class="secondary btnTiny">Explain</button>
+          <button id="solve" class="btnTiny">Solve full build</button>
+        </div>
+        <pre id="explainOut" class="small mono mutedBox" style="margin-top:.5rem; min-height: 70px; max-height: 240px; overflow:auto;"></pre>
       </section>
     </div>
 
