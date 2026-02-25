@@ -78,6 +78,11 @@
     .resultItem:last-child { border-bottom:none; }
     .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
     .btnTiny { padding:.35rem .55rem; font-size:.86rem; }
+    .resultTop .btnTiny:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      filter: grayscale(.25);
+    }
     .mutedBox { border:1px dashed rgba(255,255,255,.20); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.05); }
     dialog { border:none; border-radius: 16px; padding: 0; width: min(760px, 95vw); }
     dialog .dwrap { padding: 1rem; }

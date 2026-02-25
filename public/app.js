@@ -47,6 +47,18 @@ function resolveTargetKeyForSlot(slot) {
   return getRingTargetKey();
 }
 
+function isTargetLocked(targetKey) {
+  return Boolean(targetKey && state.locks[targetKey]);
+}
+
+function showLockedSwapMessage(targetKey) {
+  const targetLabel = slotLabelByKey(targetKey);
+  const msg = `${targetLabel} is locked. Unlock it to swap.`;
+  const status = el("status");
+  if (status) status.textContent = msg;
+  else alert(msg);
+}
+
 function badge(text) {
   const span = document.createElement("span");
   span.className = "badge";
@@ -467,6 +479,7 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
       : resolveTargetKeyForSlot(slot);
     if (targetSlot && slot !== targetSlot) continue;
     const currentName = targetKey ? (state.selected[targetKey] || null) : null;
+    const targetLocked = isTargetLocked(targetKey);
     const targetLabel = targetKey ? slotLabelByKey(targetKey) : slot;
 
     for (const it of items) {
@@ -513,6 +526,11 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
       const swapBtn = document.createElement("button");
       swapBtn.className = "btnTiny";
       swapBtn.textContent = "Swap";
+      swapBtn.disabled = targetLocked;
+      if (targetLocked) {
+        swapBtn.title = `${targetLabel} is locked`;
+        swapBtn.setAttribute("aria-label", `Swap disabled: ${targetLabel} is locked`);
+      }
       swapBtn.addEventListener("click", () => swapIntoTarget(slot, it.name, targetKey));
 
       right.appendChild(compareBtn);
@@ -533,6 +551,11 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
 function swapIntoTarget(slot, candName, explicitTargetKey = null) {
   const targetKey = explicitTargetKey || resolveTargetKeyForSlot(slot);
   if (!targetKey) return;
+
+  if (isTargetLocked(targetKey)) {
+    showLockedSwapMessage(targetKey);
+    return;
+  }
 
   state.selected[targetKey] = candName;
 
