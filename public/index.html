@@ -24,6 +24,7 @@
     }
     header { padding: 1rem 0 .5rem; }
     .grid2 { display: grid; grid-template-columns: 460px 1fr; gap: 1rem; align-items: start; }
+    .stack { display:grid; gap:1rem; align-content:start; }
     .card {
       border: 1px solid var(--pico-card-border-color);
       border-radius: 14px;
@@ -84,6 +85,14 @@
       filter: grayscale(.25);
     }
     .mutedBox { border:1px dashed rgba(255,255,255,.20); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.05); }
+    .workflowStep { margin-bottom: .85rem; }
+    .workflowStep:last-child { margin-bottom: 0; }
+    .stepTitle { display:flex; gap:.45rem; align-items:center; margin:0 0 .45rem 0; }
+    .stepBadge { font-size:.75rem; padding:.1rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.2); color:var(--text-soft); }
+    .metaGrid { display:grid; gap:.55rem; margin-top:.6rem; }
+    .quickLine { margin:0; }
+    .intentGroup { margin-top:.7rem; }
+    .intentGroup .small { margin:0 0 .35rem 0; }
     dialog { border:none; border-radius: 16px; padding: 0; width: min(760px, 95vw); }
     dialog .dwrap { padding: 1rem; }
     dialog::backdrop { background: rgba(0,0,0,.55); }
@@ -109,12 +118,13 @@
 
     <div class="grid2">
       <section class="card">
-        <div class="slotHead">
-          <h4 style="margin:0;">Player</h4>
-          <button id="refresh" class="btnTiny">Refresh</button>
-        </div>
+        <div class="workflowStep">
+          <div class="stepTitle">
+            <span class="stepBadge">Step 1</span>
+            <h4 style="margin:0;">Player + mode</h4>
+          </div>
 
-        <div class="row">
+          <div class="row">
           <label style="min-width: 120px;">
             Level
             <input id="level" type="number" min="1" max="106" value="106" />
@@ -138,57 +148,60 @@
           </label>
 
           <label style="min-width: 220px;">
-            Strict weapon class
+            Weapon class lock
             <select id="strictWeaponClass">
               <option value="1">Yes</option>
               <option value="0">No</option>
             </select>
           </label>
+          </div>
+
+          <div class="row">
+            <label><input type="radio" name="mode" value="fill" id="modeFill" checked /> Fill missing slots</label>
+            <label><input type="radio" name="mode" value="swap" id="modeSwap" /> Swap one slot</label>
+          </div>
+          <div id="swapBox" class="row" style="display:none; margin-top:.35rem;">
+            <label style="min-width: 220px;">
+              Active slot
+              <select id="swapKey">
+                <option value="helmet">Helmet</option>
+                <option value="chestplate">Chestplate</option>
+                <option value="leggings">Leggings</option>
+                <option value="boots">Boots</option>
+                <option value="necklace">Necklace</option>
+                <option value="bracelet">Bracelet</option>
+                <option value="ring1">Ring 1</option>
+                <option value="ring2">Ring 2</option>
+                <option value="weapon">Weapon</option>
+              </select>
+            </label>
+          </div>
+          <p class="small" style="margin:.35rem 0 0 0;">Fill mode scans all missing slots. Swap mode focuses only the active slot.</p>
         </div>
 
         <hr/>
 
-        <h4 style="margin-bottom:.5rem;">Mode</h4>
-        <div class="row">
-          <label><input type="radio" name="mode" value="fill" id="modeFill" checked /> Fill missing slots</label>
-          <label><input type="radio" name="mode" value="swap" id="modeSwap" /> Swap one slot</label>
-        </div>
-        <p class="small" style="margin:.35rem 0 0 0;">Fill mode requests all missing slots. Swap mode limits suggestions to the selected slot.</p>
+        <div class="workflowStep">
+          <div class="slotHead">
+            <div class="stepTitle" style="margin-bottom:0;">
+              <span class="stepBadge">Step 2</span>
+              <h4 style="margin:0;">Gear selection</h4>
+            </div>
+            <button id="clearAll" class="secondary btnTiny">Clear all</button>
+          </div>
 
-        <div id="swapBox" class="row" style="display:none; margin-top:.35rem;">
-          <label style="min-width: 220px;">
-            Slot to swap
-            <select id="swapKey">
-              <option value="helmet">Helmet</option>
-              <option value="chestplate">Chestplate</option>
-              <option value="leggings">Leggings</option>
-              <option value="boots">Boots</option>
-              <option value="necklace">Necklace</option>
-              <option value="bracelet">Bracelet</option>
-              <option value="ring1">Ring 1</option>
-              <option value="ring2">Ring 2</option>
-              <option value="weapon">Weapon</option>
-            </select>
-          </label>
-          <p class="small" style="margin:0;">In swap mode, everything else is treated as fixed unless you clear it.</p>
+          <p class="small">Click a slot to search and lock only the pieces you want to preserve.</p>
+          <div id="slots"></div>
         </div>
 
-        <hr/>
-
-        <div class="slotHead">
-          <h4 style="margin:0;">Gear</h4>
-          <button id="clearAll" class="secondary btnTiny">Clear all</button>
-        </div>
-
-        <p class="small">Tip: click into a slot to see suggestions even before typing.</p>
-        <div id="slots"></div>
-
-        <details style="margin-top:.6rem;">
+        <details style="margin-top:.8rem;">
           <summary>Advanced filters</summary>
 
-          <div class="row" style="margin-top:.6rem;">
+          <div class="intentGroup">
+            <p class="small">Search behavior</p>
+            <div class="row">
             <label style="min-width: 180px;">
-              Search mode
+              Match
               <select id="searchMode">
                 <option value="contains">Contains</option>
                 <option value="starts">Starts with</option>
@@ -197,7 +210,7 @@
             </label>
 
             <label style="min-width: 180px;">
-              Sort
+              Sort by
               <select id="sortBy">
                 <option value="bestRemaining">Best remaining SP</option>
                 <option value="lowestFinalSpend">Lowest final spend</option>
@@ -210,28 +223,39 @@
                 <option value="highestAGI">Highest AGI bonus</option>
               </select>
             </label>
+            </div>
+          </div>
 
+          <div class="intentGroup">
+            <p class="small">Quality constraints</p>
+            <div class="row">
             <label style="min-width: 170px;">
-              Min item level
+              Min level
               <input id="minItemLevel" type="number" min="0" max="106" value="0" />
             </label>
 
             <label style="min-width: 160px;">
-              Limit/slot
+              Results / slot
               <input id="limit" type="number" min="10" max="500" value="150" />
             </label>
           </div>
 
           <div class="row">
             <label><input id="noMythic" type="checkbox"/> No mythic</label>
-            <label><input id="noCrafted" type="checkbox"/> No crafted/unidentified (best-effort)</label>
-            <label><input id="noNegItem" type="checkbox"/> No negative item bonuses</label>
-            <label><input id="noNegNet" type="checkbox"/> No negative net bonuses</label>
+            <label><input id="noCrafted" type="checkbox"/> Exclude crafted/unidentified</label>
+            <label><input id="noNegItem" type="checkbox"/> Block negative item stats</label>
+            <label><input id="noNegNet" type="checkbox"/> Block negative net stats</label>
           </div>
 
-          <div class="row">
+          <div class="small" style="margin-top:.4rem;">Allowed rarities</div>
+          <div id="rarityBox" class="pillRow" style="margin-top:.4rem;"></div>
+          </div>
+
+          <div class="intentGroup">
+            <p class="small">Stat goals</p>
+            <div class="row">
             <label style="min-width: 240px;">
-              Must give + stat
+              Require bonus to
               <select id="mustGiveStat">
                 <option value="">(none)</option>
                 <option value="strength">STR</option>
@@ -243,70 +267,80 @@
             </label>
 
             <label style="min-width: 260px;">
-              Min improvement (Δ remaining SP)
+              Min Δ remaining SP
               <input id="minImprove" type="number" value="0" />
             </label>
           </div>
-
-          <div class="small" style="margin-top:.4rem;">Rarities:</div>
-          <div id="rarityBox" class="pillRow" style="margin-top:.4rem;"></div>
-
-          <details style="margin-top:.6rem;">
-            <summary>Debug</summary>
-            <div class="row" style="margin-top:.6rem;">
-              <label><input id="debug" type="checkbox"/> Show why excluded</label>
-              <label style="min-width: 150px;">
-                Debug limit
-                <input id="debugLimit" type="number" min="0" max="200" value="80" />
-              </label>
-              <button id="reloadDb" class="secondary btnTiny">Force DB reload</button>
             </div>
-          </details>
+          </div>
         </details>
       </section>
 
-      <section class="card">
-        <h4 style="margin-bottom:.25rem;">Suggestions</h4>
+      <div class="stack">
+        <section class="card">
+          <div class="stepTitle">
+            <span class="stepBadge">Step 3</span>
+            <h4 style="margin:0;">Suggestions + results</h4>
+          </div>
 
-        <div id="status" class="small mutedBox"></div>
+          <div class="metaGrid">
+            <div id="status" class="small mutedBox"></div>
+            <p id="statusQuick" class="small quickLine"></p>
+          </div>
 
-        <div id="alloc" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
+          <div id="results" class="resultsGrid" style="margin-top:.7rem;"></div>
 
-        <div id="setSynergy" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
+          <details style="margin-top:.8rem;">
+            <summary>Build details</summary>
+            <div id="alloc" class="small mono" style="white-space: pre-wrap; margin-top:.55rem;"></div>
+            <div id="setSynergy" class="small mono" style="white-space: pre-wrap; margin-top:.55rem;"></div>
+            <div id="notes" class="small" style="margin-top:.5rem;"></div>
+          </details>
+        </section>
 
-        <div id="notes" class="small" style="margin-top:.5rem;"></div>
+        <section class="card">
+          <h4 style="margin-bottom:.35rem;">Utility panel</h4>
 
-        <div id="debugBox" class="small" style="margin-top:.5rem;"></div>
+          <details>
+            <summary>Tomes</summary>
+            <div class="suggest" style="margin:.6rem 0 .5rem;">
+              <input id="tomeInput" placeholder="Search tomes..." autocomplete="off" />
+              <div id="tomeList" class="suggestList" style="display:none;"></div>
+            </div>
+            <div class="row" style="margin-bottom:.5rem;">
+              <button id="clearTomes" class="secondary btnTiny">Clear tomes</button>
+            </div>
+            <div id="tomePills" class="pillRow"></div>
+          </details>
 
-        <hr/>
+          <details style="margin-top:.7rem;">
+            <summary>Explain / solve tools</summary>
+            <div class="row" style="margin-top:.6rem;">
+              <label style="min-width: 260px;">
+                Explain item
+                <input id="explainName" placeholder="Exact item name" />
+              </label>
+              <button id="explainBtn" class="secondary btnTiny">Explain</button>
+              <button id="solve" class="btnTiny">Solve full build</button>
+            </div>
+            <pre id="explainOut" class="small mono mutedBox" style="margin-top:.5rem; min-height: 70px; max-height: 240px; overflow:auto;"></pre>
+          </details>
 
-        <div id="results" class="resultsGrid"></div>
-
-        <hr/>
-
-        <h4 style="margin-bottom:.35rem;">Tomes</h4>
-        <div class="suggest" style="margin-bottom:.5rem;">
-          <input id="tomeInput" placeholder="Search tomes..." autocomplete="off" />
-          <div id="tomeList" class="suggestList" style="display:none;"></div>
-        </div>
-        <div class="row" style="margin-bottom:.5rem;">
-          <button id="clearTomes" class="secondary btnTiny">Clear tomes</button>
-        </div>
-        <div id="tomePills" class="pillRow"></div>
-
-        <hr/>
-
-        <h4 style="margin-bottom:.35rem;">Tools</h4>
-        <div class="row">
-          <label style="min-width: 260px;">
-            Explain item
-            <input id="explainName" placeholder="Exact item name" />
-          </label>
-          <button id="explainBtn" class="secondary btnTiny">Explain</button>
-          <button id="solve" class="btnTiny">Solve full build</button>
-        </div>
-        <pre id="explainOut" class="small mono mutedBox" style="margin-top:.5rem; min-height: 70px; max-height: 240px; overflow:auto;"></pre>
-      </section>
+          <details style="margin-top:.7rem;">
+            <summary>Debug + maintenance</summary>
+            <div class="row" style="margin-top:.6rem;">
+              <label><input id="debug" type="checkbox"/> Collect exclusion reasons</label>
+              <label style="min-width: 150px;">
+                Sample cap
+                <input id="debugLimit" type="number" min="0" max="200" value="80" />
+              </label>
+              <button id="reloadDb" class="secondary btnTiny">Force DB reload</button>
+              <button id="refresh" class="btnTiny">Refresh</button>
+            </div>
+            <div id="debugBox" class="small" style="margin-top:.5rem;"></div>
+          </details>
+        </section>
+      </div>
     </div>
 
     <dialog id="compareDlg">
