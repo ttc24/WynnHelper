@@ -34,6 +34,22 @@ function badge(text) {
   return span;
 }
 
+function makeSuggestItem(it) {
+  const div = document.createElement("div");
+  div.className = "suggestItem";
+
+  const name = document.createElement("span");
+  name.textContent = it.name;
+
+  const meta = document.createElement("span");
+  meta.className = "small";
+  meta.textContent = `lvl ${it.levelReq}, ${it.rarity}`;
+
+  div.appendChild(name);
+  div.appendChild(meta);
+  return div;
+}
+
 function reqStr(arr) {
   const map = ["STR","DEX","INT","DEF","AGI"];
   const parts = [];
@@ -223,9 +239,7 @@ function renderSlots() {
 
       for (let i = 0; i < lastItems.length; i++) {
         const it = lastItems[i];
-        const div = document.createElement("div");
-        div.className = "suggestItem";
-        div.innerHTML = `<span>${it.name}</span><span class="small">lvl ${it.levelReq}, ${it.rarity}</span>`;
+        const div = makeSuggestItem(it);
         div.addEventListener("mousedown", (e) => {
           e.preventDefault();
           state.selected[s.key] = it.name;
@@ -336,17 +350,33 @@ async function refresh() {
     }
 
     // notes
-    el("notes").innerHTML = (json.notes || []).map((n) => `<div>• ${n}</div>`).join("");
+    const notesEl = el("notes");
+    notesEl.innerHTML = "";
+    for (const n of (json.notes || [])) {
+      const noteLine = document.createElement("div");
+      noteLine.textContent = `• ${n}`;
+      notesEl.appendChild(noteLine);
+    }
 
     // debug excluded
     if (payload.debug && json.debugExcluded) {
       const c = json.debugExcluded.counts || {};
       const countsLine = Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `${k}: ${v}`).join(" | ");
       const sample = (json.debugExcluded.samples || []).slice(0, 25).map((x) => `- ${x.name}: ${x.reason}`).join("\n");
-      el("debugBox").innerHTML = `
-        <strong>Why excluded (sample):</strong>
-        <div class="small mono" style="white-space: pre-wrap; margin-top:.35rem;">${countsLine || "(no exclusions captured)"}\n\n${sample || ""}</div>
-      `;
+
+      const debugBox = el("debugBox");
+
+      const heading = document.createElement("strong");
+      heading.textContent = "Why excluded (sample):";
+
+      const details = document.createElement("div");
+      details.className = "small mono";
+      details.style.whiteSpace = "pre-wrap";
+      details.style.marginTop = ".35rem";
+      details.textContent = `${countsLine || "(no exclusions captured)"}\n\n${sample || ""}`;
+
+      debugBox.appendChild(heading);
+      debugBox.appendChild(details);
     }
 
     renderResults(json.results, payload.targetSlot);
@@ -526,9 +556,7 @@ function wireTomeSearch() {
 
     for (let i=0;i<lastItems.length;i++) {
       const it = lastItems[i];
-      const div = document.createElement("div");
-      div.className = "suggestItem";
-      div.innerHTML = `<span>${it.name}</span><span class="small">lvl ${it.levelReq}, ${it.rarity}</span>`;
+      const div = makeSuggestItem(it);
       div.addEventListener("mousedown", (e) => {
         e.preventDefault();
         if (!state.tomes.includes(it.name)) state.tomes.push(it.name);
