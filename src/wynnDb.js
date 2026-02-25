@@ -39,7 +39,7 @@ function slotFromItem(it) {
   if (it.type === "armour" && it.armourType) return it.armourType;        // helmet/chestplate/leggings/boots
   if ((it.type === "accessory" || it.type === "accessories") && it.accessoryType) return it.accessoryType; // ring/bracelet/necklace
   if (it.type === "weapon" && it.weaponType) return "weapon";
-  // tomes (schema shows tomes filter exists; types vary in practice) :contentReference[oaicite:1]{index=1}
+  // Tomes are handled heuristically because type/subType values vary in practice.
   const t = String(it.type ?? "").toLowerCase();
   const st = String(it.subType ?? "").toLowerCase();
   if (t.includes("tome") || st.includes("tome")) return "tome";
@@ -47,7 +47,7 @@ function slotFromItem(it) {
 }
 
 function classReqFromReq(req = {}) {
-  const v = req.class_requirement ?? req.classRequirement ?? null; // docs show class_requirement :contentReference[oaicite:2]{index=2}
+  const v = req.class_requirement ?? req.classRequirement ?? null; // class requirement appears under either key
   if (!v) return null;
   return String(v).toLowerCase();
 }
@@ -90,8 +90,8 @@ export class WynnDb {
       // ✅ weapon bonus ignored for build validity; still kept for display
       const bonusEffArr = slot === "weapon" ? emptyArr() : bonusArr;
 
-      const identifier = Boolean(it.identifier ?? false);         // in schema :contentReference[oaicite:3]{index=3}
-      const allowCraftsman = Boolean(it.allow_craftsman ?? false); // in schema :contentReference[oaicite:4]{index=4}
+      const identifier = Boolean(it.identifier ?? false);          // optional flag from the API payload
+      const allowCraftsman = Boolean(it.allow_craftsman ?? false); // optional craftsman compatibility flag
 
       const classReq = classReqFromReq(req); // e.g. "warrior" etc.
       const weaponType = it.weaponType ? String(it.weaponType).toLowerCase() : null;

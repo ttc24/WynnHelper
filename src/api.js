@@ -80,7 +80,8 @@ function passesFilters(it, ctx) {
   if (ctx.allowedRarities?.length && !ctx.allowedRarities.includes(it.rarity)) return false;
   if (ctx.noMythic && String(it.rarity).toLowerCase() === "mythic") return false;
 
-  // best-effort “no crafted”: only include items that are identified (crafted items often aren’t in the fixed DB; still useful) :contentReference[oaicite:5]{index=5}
+  // Best-effort "no crafted": only include identified items.
+  // Crafted items are often absent from the fixed DB, but this filter is still useful.
   if (ctx.noCraftedBestEffort && !it.identifier) return false;
 
   if (ctx.noNegativeItemSkillBonuses) {
