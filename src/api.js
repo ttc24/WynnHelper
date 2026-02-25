@@ -551,6 +551,14 @@ export async function buildApiRouter({ cacheDir }) {
 
     const resolvedTargetSlotKey = targetSlotKey(targetSlot, requestedTargetSlotKey, selectedItemsByKey, locks);
 
+    const resolvedTargetSlotFamily = resolvedTargetSlotKey
+      ? (GEAR_SLOT_KEYS.find((s) => s.key === resolvedTargetSlotKey)?.slot ?? null)
+      : null;
+    const expectedSlotFamily = targetSlot || resolvedTargetSlotFamily;
+    if (expectedSlotFamily && cand.slot !== expectedSlotFamily) {
+      return res.json({ ok: true, item: cand.name, passes: false, reason: "fails slot mismatch" });
+    }
+
     let fixed = [];
     for (const s of GEAR_SLOT_KEYS) {
       const it = selectedItemsByKey[s.key];
