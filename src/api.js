@@ -101,6 +101,16 @@ function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
   return "ring1";
 }
 
+function areBothRingsLocked(locks) {
+  return Boolean(locks.ring1) && Boolean(locks.ring2);
+}
+
+function isActiveSlotTargetLocked(slot, slotTargetKey, locks) {
+  if (slot === "ring" && areBothRingsLocked(locks)) return true;
+  if (!slotTargetKey) return false;
+  return Boolean(locks[slotTargetKey]);
+}
+
 function isTargetEntry(slotEntry, targetSlot, targetKey) {
   if (!targetSlot) return false;
   if (targetKey) return slotEntry.key === targetKey;
@@ -392,6 +402,18 @@ export async function buildApiRouter({ cacheDir }) {
             : targetSlotKey("ring", "", selectedItemsByKey, locks))
         : slot;
 
+      const slotLocked = isActiveSlotTargetLocked(slot, slotTargetKey, locks);
+      if (slotLocked) {
+        results[slot] = [];
+        notes.push(`Skipped ${slot} candidates: slot locked.`);
+
+        if (debug && allReasonCounts) {
+          allReasonCounts["slot locked"] = (allReasonCounts["slot locked"] ?? 0) + 1;
+        }
+
+        continue;
+      }
+
       const slotBase = [];
       for (const s of GEAR_SLOT_KEYS) {
         const it = selectedItemsByKey[s.key];
@@ -589,6 +611,11 @@ export async function buildApiRouter({ cacheDir }) {
       ? (GEAR_SLOT_KEYS.find((s) => s.key === resolvedTargetSlotKey)?.slot ?? null)
       : null;
     const expectedSlotFamily = targetSlot || resolvedTargetSlotFamily;
+
+    if (expectedSlotFamily && isActiveSlotTargetLocked(expectedSlotFamily, resolvedTargetSlotKey, locks)) {
+      return res.json({ ok: true, item: cand.name, passes: false, reason: "slot locked" });
+    }
+
     if (expectedSlotFamily && cand.slot !== expectedSlotFamily) {
       return res.json({ ok: true, item: cand.name, passes: false, reason: "fails slot mismatch" });
     }
