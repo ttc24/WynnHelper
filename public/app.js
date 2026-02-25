@@ -287,11 +287,38 @@ function renderSlots() {
 
     let activeIdx = -1;
     let lastItems = [];
+    let requestSeq = 0;
+    let latestResultSeq = 0;
+    let inflightController = null;
 
-    const closeList = () => { list.style.display = "none"; activeIdx = -1; lastItems = []; };
+    const closeList = () => {
+      list.style.display = "none";
+      list.classList.remove("loading", "error");
+      activeIdx = -1;
+      lastItems = [];
+    };
+
+    const showListState = (text, cls) => {
+      list.innerHTML = "";
+      const statusRow = document.createElement("div");
+      statusRow.className = "suggestItem small";
+      if (cls) statusRow.classList.add(cls);
+      statusRow.textContent = text;
+      list.appendChild(statusRow);
+      list.style.display = "block";
+    };
 
     async function doSearch() {
       const q = input.value.trim();
+      const seq = ++requestSeq;
+
+      if (inflightController) inflightController.abort();
+      const controller = new AbortController();
+      inflightController = controller;
+
+      list.classList.remove("error");
+      list.classList.add("loading");
+      showListState("Loading…", "loading");
 
       const params = new URLSearchParams({
         q,
@@ -302,26 +329,44 @@ function renderSlots() {
         strictWeaponClass: el("strictWeaponClass").value,
       });
 
-      const json = await apiJson(`/api/search?${params.toString()}`);
-      lastItems = json.results || [];
+      try {
+        const json = await apiJson(`/api/search?${params.toString()}`, { signal: controller.signal });
+        if (seq !== requestSeq) return;
 
-      list.innerHTML = "";
-      activeIdx = -1;
+        latestResultSeq = seq;
+        lastItems = json.results || [];
 
-      for (let i = 0; i < lastItems.length; i++) {
-        const it = lastItems[i];
-        const div = makeSuggestItem(it);
-        div.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          state.selected[s.key] = it.name;
-          input.value = it.name;
-          closeList();
-          refresh();
-        });
-        list.appendChild(div);
+        list.innerHTML = "";
+        activeIdx = -1;
+
+        for (let i = 0; i < lastItems.length; i++) {
+          const it = lastItems[i];
+          const div = makeSuggestItem(it);
+          div.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            state.selected[s.key] = it.name;
+            input.value = it.name;
+            closeList();
+            refresh();
+          });
+          list.appendChild(div);
+        }
+
+        list.style.display = lastItems.length ? "block" : "none";
+      } catch (err) {
+        if (seq !== requestSeq) return;
+        if (err?.name === "AbortError") return;
+
+        closeList();
+        if (document.activeElement === input) {
+          list.classList.add("error");
+          showListState("Search failed. Try again.", "error");
+        }
+      } finally {
+        if (seq !== requestSeq) return;
+        if (inflightController === controller) inflightController = null;
+        list.classList.remove("loading");
       }
-
-      list.style.display = lastItems.length ? "block" : "none";
     }
 
     let t = null;
@@ -334,6 +379,7 @@ function renderSlots() {
 
     // keyboard navigation
     input.addEventListener("keydown", (e) => {
+      if (latestResultSeq !== requestSeq) return;
       if (list.style.display !== "block") return;
       const items = Array.from(list.querySelectorAll(".suggestItem"));
       if (!items.length) return;
