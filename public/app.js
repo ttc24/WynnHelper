@@ -87,6 +87,7 @@ function bonusStr(arr) {
 function gatherPayload() {
   const rarities = Array.from(state.rarityEnabled);
   const targetSlot = deriveTargetSlot();
+  const targetSlotKey = deriveTargetSlotKey(targetSlot);
 
   return {
     level: Number(el("level").value),
@@ -110,6 +111,7 @@ function gatherPayload() {
     selected: state.selected,
     locks: state.locks,
     targetSlot,
+    targetSlotKey,
     tomes: state.tomes,
 
     debug: el("debug").checked,
@@ -129,6 +131,18 @@ function normalizeSwapSlot(swapKey) {
 function deriveTargetSlot() {
   if (getMode() !== "swap") return "";
   return normalizeSwapSlot(el("swapKey")?.value || "");
+}
+
+function deriveTargetSlotKey(targetSlot = deriveTargetSlot()) {
+  if (!targetSlot) return "";
+
+  if (getMode() === "swap") {
+    const swapKey = el("swapKey")?.value || "";
+    if (swapKey) return swapKey;
+  }
+
+  if (targetSlot === "ring") return getRingTargetKey();
+  return targetSlot;
 }
 
 function syncModeUI() {
@@ -424,14 +438,14 @@ async function refresh() {
       debugBox.appendChild(details);
     }
 
-    renderResults(json.results, payload.targetSlot);
+    renderResults(json.results, payload.targetSlot, payload.targetSlotKey);
   } catch (e) {
     el("status").textContent = `Error: ${e.message || e}`;
     el("alloc").textContent = "If this says DB fetch failed, hit “Force DB reload”.";
   }
 }
 
-function renderResults(results, targetSlot) {
+function renderResults(results, targetSlot, targetSlotKey = "") {
   const root = el("results");
   root.innerHTML = "";
 
@@ -448,7 +462,9 @@ function renderResults(results, targetSlot) {
     const list = document.createElement("div");
     const items = results[slot] || [];
 
-    const targetKey = resolveTargetKeyForSlot(slot);
+    const targetKey = targetSlot && slot === targetSlot
+      ? (targetSlotKey || resolveTargetKeyForSlot(slot))
+      : resolveTargetKeyForSlot(slot);
     if (targetSlot && slot !== targetSlot) continue;
     const currentName = targetKey ? (state.selected[targetKey] || null) : null;
     const targetLabel = targetKey ? slotLabelByKey(targetKey) : slot;
@@ -559,7 +575,10 @@ function wireCompareDialog() {
   el("cmpClose").addEventListener("click", () => el("compareDlg").close());
   el("cmpSwap").addEventListener("click", () => {
     const c = state.compare;
-    if (c?.slotKey && c?.candidateName) swapIntoTarget(normalizeSwapSlot(c.slotKey), c.candidateName, c.slotKey);
+    if (c?.slotKey && c?.candidateName) {
+      const slot = slotKeys.find((s) => s.key === c.slotKey)?.slot || c.slotKey;
+      swapIntoTarget(slot, c.candidateName, c.slotKey);
+    }
     el("compareDlg").close();
   });
 }
