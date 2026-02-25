@@ -360,13 +360,39 @@ export async function buildApiRouter({ cacheDir }) {
       setGroups[key].push(it.name);
     }
 
-    // if target slot not selected: default “show missing slots” behavior
+    // If target slot is not specified, we intentionally show all slots (including filled ones);
+    // per-slot evaluation below is replacement-aware and swaps against that slot's current item.
     const outputSlots = targetSlot ? [targetSlot] : ["helmet","chestplate","leggings","boots","necklace","bracelet","ring","weapon"];
 
     const results = {};
     const debugExcluded = debug ? { counts: {}, samples: [] } : null;
 
     for (const slot of outputSlots) {
+      const slotTargetKey = slot === "ring"
+        ? (targetSlot === "ring"
+            ? resolvedTargetSlotKey
+            : targetSlotKey("ring", "", selectedItemsByKey, locks))
+        : slot;
+
+      const slotBase = [];
+      for (const s of GEAR_SLOT_KEYS) {
+        const it = selectedItemsByKey[s.key];
+        if (!it) continue;
+
+        const isLocked = Boolean(locks[s.key]);
+        const isTarget = isTargetEntry(s, slot, slotTargetKey);
+        if (!isLocked && isTarget) continue;
+        slotBase.push(it);
+      }
+      slotBase.push(...tomeItems);
+
+      const currentSlotItem = slotTargetKey ? selectedItemsByKey[slotTargetKey] ?? null : null;
+      const slotBaseline = slotBase.slice();
+      if (currentSlotItem && !slotBaseline.includes(currentSlotItem)) {
+        slotBaseline.push(currentSlotItem);
+      }
+      const slotBaseStats = computeBuildStats(slotBaseline, budget, { perSkillCap: 100 });
+
       const pool = (d.bySlot.get(slot) ?? []).filter((it) => {
         if (usedNames.has(it.name)) return false;
         return passesFilters(it, ctx);
@@ -376,9 +402,7 @@ export async function buildApiRouter({ cacheDir }) {
       const excludedSamples = [];
 
       for (const cand of pool) {
-        // ring limits: if target slot is ring, we only replace ONE ring at a time;
-        // candidates are tested as fixed + candidate + other fixed rings already in fixed.
-        const test = fixed.concat([cand]);
+        const test = slotBase.concat([cand]);
 
         // net negative constraint
         const st = computeBuildStats(test, budget, { perSkillCap: 100 });
@@ -388,8 +412,8 @@ export async function buildApiRouter({ cacheDir }) {
         else if (st.finalSpend > budget) fail = "fails final budget";
         else if (!st.equipOrderOk) fail = "fails equip order";
 
-        // improvement threshold vs baseline fixed build
-        const deltaRemaining = (budget - st.finalSpend) - (budget - baseStats.finalSpend);
+        // improvement threshold vs baseline for this slot (same base, current item when present)
+        const deltaRemaining = (budget - st.finalSpend) - (budget - slotBaseStats.finalSpend);
         if (!fail && minImprove != null && deltaRemaining < minImprove) fail = "fails improvement threshold";
 
         if (fail) {
