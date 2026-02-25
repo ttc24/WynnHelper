@@ -20,6 +20,8 @@ let refreshTimer = null;
 const state = {
   rarities: [],
   rarityEnabled: new Set(),
+  healthReady: false,
+  healthLoadError: null,
   selected: {},
   locks: {},
   tomes: [],
@@ -176,13 +178,43 @@ async function apiJson(url, opts) {
 
 async function initHealth() {
   const h = await apiJson("/api/health");
-  state.rarities = h.rarities;
-  state.rarityEnabled = new Set(h.rarities);
+  const rarities = Array.isArray(h.rarities) ? h.rarities : [];
+  state.rarities = rarities;
+  state.rarityEnabled = new Set(rarities);
+  state.healthReady = true;
+  state.healthLoadError = null;
   renderRarities();
+}
+
+function setHealthLoadFailure(err) {
+  state.healthReady = false;
+  state.healthLoadError = err;
+  state.rarities = [];
+  state.rarityEnabled = new Set();
+  renderRarities();
+}
+
+function setHealthRetryStatus(prefix = "Health check failed") {
+  const msg = `${prefix}. Core controls are available; press Refresh or Force DB reload to retry item data.`;
+  const status = el("status");
+  if (status) status.textContent = msg;
+}
+
+async function retryHealthLoad() {
+  try {
+    await initHealth();
+    renderSlots();
+    return true;
+  } catch (err) {
+    setHealthLoadFailure(err);
+    setHealthRetryStatus("Health reload failed");
+    return false;
+  }
 }
 
 function renderRarities() {
   const box = el("rarityBox");
+  if (!box) return;
   box.innerHTML = "";
   for (const r of state.rarities) {
     const lab = document.createElement("label");
@@ -225,6 +257,7 @@ function renderTomes() {
 
 function renderSlots() {
   const root = el("slots");
+  if (!root) return;
   root.innerHTML = "";
 
   for (const s of slotKeys) {
@@ -781,7 +814,13 @@ function wireControls() {
     if (getMode() === "swap") refresh();
   });
 
-  el("refresh").addEventListener("click", refresh);
+  el("refresh").addEventListener("click", async () => {
+    if (!state.healthReady) {
+      const ok = await retryHealthLoad();
+      if (!ok) return;
+    }
+    refresh();
+  });
 
   el("clearAll").addEventListener("click", () => {
     state.selected = {};
@@ -793,8 +832,8 @@ function wireControls() {
   el("reloadDb").addEventListener("click", async () => {
     try {
       await apiJson("/api/reload", { method: "POST" });
-      await initHealth();
-      renderSlots();
+      const ok = await retryHealthLoad();
+      if (!ok) return;
       refresh();
     } catch (e) {
       alert(`Reload failed: ${e.message || e}`);
@@ -863,12 +902,26 @@ async function solveBuild() {
 }
 
 (async function init() {
-  await initHealth();
-  renderTomes();
-  renderSlots();
-  syncModeUI();
-  wireCompareDialog();
-  wireTomeSearch();
-  wireControls();
-  refresh();
+  try {
+    try {
+      await initHealth();
+    } catch (err) {
+      setHealthLoadFailure(err);
+      setHealthRetryStatus("Initial health load failed");
+    }
+
+    renderTomes();
+    renderSlots();
+    syncModeUI();
+    wireCompareDialog();
+    wireTomeSearch();
+    wireControls();
+
+    if (state.healthReady) {
+      refresh();
+    }
+  } catch (err) {
+    const status = el("status");
+    if (status) status.textContent = `Startup error: ${err.message || err}`;
+  }
 })();
