@@ -460,7 +460,10 @@ export async function buildApiRouter({ cacheDir }) {
       }
 
       // sorting
-      const statSort = (idx) => (b, a) => (a.bonus[idx] - b.bonus[idx]) || (a.remainingAfter - b.remainingAfter) || a.name.localeCompare(b.name);
+      const statSort = (idx) => (a, b) =>
+        (b.bonus[idx] - a.bonus[idx]) ||
+        (b.remainingAfter - a.remainingAfter) ||
+        a.name.localeCompare(b.name);
 
       compatible.sort((a, b) => {
         if (sortBy === "lowestFinalSpend") return a.finalSpend - b.finalSpend || b.remainingAfter - a.remainingAfter;
