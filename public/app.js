@@ -23,8 +23,29 @@ const state = {
 
   lastResponse: null,
 
-  compare: { slotKey: null, candidateName: null, candidate: null, currentName: null }
+  compare: { slotKey: null, candidateName: null, candidate: null, currentName: null, slotLabel: null },
+  ringTargetKey: "ring1"
 };
+
+function slotLabelByKey(slotKey) {
+  return slotKeys.find((x) => x.key === slotKey)?.label || slotKey;
+}
+
+function getRingTargetKey() {
+  if (state.ringTargetKey === "ring1" || state.ringTargetKey === "ring2") return state.ringTargetKey;
+  return "ring1";
+}
+
+function resolveTargetKeyForSlot(slot) {
+  if (slot !== "ring") return slotKeys.find((x) => x.slot === slot)?.key || null;
+
+  if (getMode() === "swap") {
+    const swapKey = el("swapKey")?.value || "";
+    if (swapKey === "ring1" || swapKey === "ring2") return swapKey;
+  }
+
+  return getRingTargetKey();
+}
 
 function badge(text) {
   const span = document.createElement("span");
@@ -194,6 +215,27 @@ function renderSlots() {
     lockLab.appendChild(cb);
     lockLab.appendChild(document.createTextNode("Lock"));
     meta.appendChild(lockLab);
+
+    if (s.key === "ring1") {
+      const ringTargetLab = document.createElement("label");
+      ringTargetLab.className = "pill";
+      ringTargetLab.appendChild(document.createTextNode("Ring target"));
+
+      const ringTarget = document.createElement("select");
+      ringTarget.style.margin = "0";
+      ringTarget.innerHTML = `
+        <option value="ring1">Ring 1</option>
+        <option value="ring2">Ring 2</option>
+      `;
+      ringTarget.value = getRingTargetKey();
+      ringTarget.addEventListener("change", () => {
+        state.ringTargetKey = ringTarget.value;
+        refresh();
+      });
+
+      ringTargetLab.appendChild(ringTarget);
+      meta.appendChild(ringTargetLab);
+    }
 
     root.appendChild(meta);
 
@@ -406,19 +448,10 @@ function renderResults(results, targetSlot) {
     const list = document.createElement("div");
     const items = results[slot] || [];
 
-    // current item name for compare (for target slot)
-    const currentName = (() => {
-      if (!targetSlot) {
-        if (slot === "ring") return state.selected.ring1 || state.selected.ring2 || null;
-        const fillKey = slotKeys.find((x) => x.slot === slot)?.key;
-        return fillKey ? state.selected[fillKey] || null : null;
-      }
-      if (slot !== targetSlot) return null;
-      // pick the first matching selected key
-      const k = slotKeys.find((x) => x.slot === slot)?.key;
-      if (!k) return null;
-      return state.selected[k] || null;
-    })();
+    const targetKey = resolveTargetKeyForSlot(slot);
+    if (targetSlot && slot !== targetSlot) continue;
+    const currentName = targetKey ? (state.selected[targetKey] || null) : null;
+    const targetLabel = targetKey ? slotLabelByKey(targetKey) : slot;
 
     for (const it of items) {
       const row = document.createElement("div");
@@ -459,12 +492,12 @@ function renderResults(results, targetSlot) {
       const compareBtn = document.createElement("button");
       compareBtn.className = "secondary btnTiny";
       compareBtn.textContent = "Compare";
-      compareBtn.addEventListener("click", () => openCompare(slot, it, currentName));
+      compareBtn.addEventListener("click", () => openCompare(slot, targetKey, it, currentName, targetLabel));
 
       const swapBtn = document.createElement("button");
       swapBtn.className = "btnTiny";
       swapBtn.textContent = "Swap";
-      swapBtn.addEventListener("click", () => swapIntoTarget(slot, it.name));
+      swapBtn.addEventListener("click", () => swapIntoTarget(slot, it.name, targetKey));
 
       right.appendChild(compareBtn);
       right.appendChild(swapBtn);
@@ -481,34 +514,32 @@ function renderResults(results, targetSlot) {
   }
 }
 
-function swapIntoTarget(slot, candName) {
-  // swap into the first matching key for this slot
-  const keys = slotKeys.filter((x) => x.slot === slot).map((x) => x.key);
+function swapIntoTarget(slot, candName, explicitTargetKey = null) {
+  const targetKey = explicitTargetKey || resolveTargetKeyForSlot(slot);
+  if (!targetKey) return;
 
-  if (slot === "ring") {
-    // replace ring1 if it's the target key locked? we simply pick the first unlocked ring key
-    const k1 = "ring1", k2 = "ring2";
-    const unlocked = (!state.locks[k1]) ? k1 : (!state.locks[k2] ? k2 : k1);
-    state.selected[unlocked] = candName;
-  } else {
-    const k = keys[0];
-    state.selected[k] = candName;
+  state.selected[targetKey] = candName;
+
+  if (slot === "ring" && (targetKey === "ring1" || targetKey === "ring2")) {
+    state.ringTargetKey = targetKey;
   }
 
   renderSlots();
   refresh();
 }
 
-function openCompare(slot, candidate, currentName) {
+function openCompare(slot, slotKey, candidate, currentName, slotLabel) {
   const dlg = el("compareDlg");
   const title = el("cmpTitle");
   const body = el("cmpBody");
 
   const cur = currentName ? `Current: ${currentName}` : "Current: (none)";
-  title.textContent = `${slot.toUpperCase()} – Compare`;
+  const resolvedLabel = slotLabel || slotLabelByKey(slotKey || slot);
+  title.textContent = `${resolvedLabel} – Compare`;
 
   body.textContent =
-`${cur}
+`Slot: ${resolvedLabel}
+${cur}
 Candidate: ${candidate.name}
 
 Candidate req:   ${reqStr(candidate.req)}
@@ -519,7 +550,7 @@ Final spend: ${candidate.finalSpend}
 Remaining SP: ${candidate.remainingAfter}
 Δ Remaining:  ${candidate.deltaRemaining >= 0 ? "+" : ""}${candidate.deltaRemaining}`;
 
-  state.compare = { slotKey: slot, candidateName: candidate.name, candidate, currentName };
+  state.compare = { slotKey: slotKey || slot, candidateName: candidate.name, candidate, currentName, slotLabel: resolvedLabel };
 
   dlg.showModal();
 }
@@ -528,7 +559,7 @@ function wireCompareDialog() {
   el("cmpClose").addEventListener("click", () => el("compareDlg").close());
   el("cmpSwap").addEventListener("click", () => {
     const c = state.compare;
-    if (c?.slotKey && c?.candidateName) swapIntoTarget(c.slotKey, c.candidateName);
+    if (c?.slotKey && c?.candidateName) swapIntoTarget(normalizeSwapSlot(c.slotKey), c.candidateName, c.slotKey);
     el("compareDlg").close();
   });
 }
