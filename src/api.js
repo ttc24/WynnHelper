@@ -63,6 +63,21 @@ function parseBool(value, fallback) {
   return fallback;
 }
 
+function parseSafeNumber(value, { fallback, min = -Infinity, max = Infinity, floor = true } = {}) {
+  const parsed = Number(value);
+  const safeDefault = Number.isFinite(Number(fallback)) ? Number(fallback) : 0;
+  const finite = Number.isFinite(parsed) ? parsed : safeDefault;
+  const normalized = floor ? Math.floor(finite) : finite;
+  return Math.min(max, Math.max(min, normalized));
+}
+
+function parseOptionalSafeNumber(value, { min = -Infinity, max = Infinity, floor = false } = {}) {
+  if (value == null) return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return parseSafeNumber(parsed, { fallback: parsed, min, max, floor });
+}
+
 function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
   if (!targetSlot) return null;
 
@@ -189,7 +204,7 @@ export async function buildApiRouter({ cacheDir }) {
     const q = String(req.query.q ?? "").toLowerCase().trim();
     const slot = String(req.query.slot ?? "").trim();
     const mode = String(req.query.mode ?? "contains"); // contains | starts | fuzzy
-    const level = Math.max(1, Math.floor(Number(req.query.level ?? 106)));
+    const level = parseSafeNumber(req.query.level, { fallback: 106, min: 1 });
     const cls = String(req.query.class ?? "").toLowerCase().trim();
 
     const strictWeaponClass = String(req.query.strictWeaponClass ?? "0") === "1";
@@ -229,15 +244,17 @@ export async function buildApiRouter({ cacheDir }) {
   router.post("/compatible", async (req, res) => {
     const body = req.body ?? {};
 
-    const level = Math.max(1, Math.floor(Number(body.level ?? 106)));
-    const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
+    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
 
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
 
-    const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
+    const minItemLevel = body.minItemLevel != null
+      ? parseSafeNumber(body.minItemLevel, { fallback: 0, min: 0 })
+      : null;
 
     const noMythic = parseBool(body.noMythic, false);
     const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
@@ -248,14 +265,14 @@ export async function buildApiRouter({ cacheDir }) {
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
 
-    const minImprove = body.minImprove != null ? Number(body.minImprove) : null;
+    const minImprove = parseOptionalSafeNumber(body.minImprove);
 
     const sortBy = String(body.sortBy ?? "bestRemaining"); // bestRemaining | lowestFinalSpend | lowestLevel | highestSTR... | leastNegative
 
     const debug = parseBool(body.debug, false);
-    const debugLimit = Math.max(0, Math.min(200, Math.floor(Number(body.debugLimit ?? 80))));
+    const debugLimit = parseSafeNumber(body.debugLimit, { fallback: 80, min: 0, max: 200 });
 
-    const limit = Math.max(10, Math.min(500, Math.floor(Number(body.limit ?? 150))));
+    const limit = parseSafeNumber(body.limit, { fallback: 150, min: 10, max: 500 });
 
     const targetSlot = String(body.targetSlot ?? ""); // single slot to search (recommended)
     const requestedTargetSlotKey = String(body.targetSlotKey ?? "").trim();
@@ -515,13 +532,15 @@ export async function buildApiRouter({ cacheDir }) {
     const locks = body.locks ?? {};
     const tomesSelected = Array.isArray(body.tomes) ? body.tomes.map(String) : [];
 
-    const level = Math.max(1, Math.floor(Number(body.level ?? 106)));
-    const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
+    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
-    const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
+    const minItemLevel = body.minItemLevel != null
+      ? parseSafeNumber(body.minItemLevel, { fallback: 0, min: 0 })
+      : null;
     const noMythic = parseBool(body.noMythic, false);
     const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
     const noNegativeItemSkillBonuses = parseBool(body.noNegativeItemSkillBonuses, false);
@@ -530,7 +549,7 @@ export async function buildApiRouter({ cacheDir }) {
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
 
-    const minImprove = body.minImprove != null ? Number(body.minImprove) : null;
+    const minImprove = parseOptionalSafeNumber(body.minImprove);
 
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
@@ -597,14 +616,16 @@ export async function buildApiRouter({ cacheDir }) {
 
   router.post("/solve", async (req, res) => {
     const body = req.body ?? {};
-    const level = Math.max(1, Math.floor(Number(body.level ?? 106)));
-    const extraPoints = Math.max(0, Math.floor(Number(body.extraPoints ?? 0)));
+    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
     const cls = String(body.class ?? "").toLowerCase().trim() || null;
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
-    const minItemLevel = body.minItemLevel != null ? Math.max(0, Math.floor(Number(body.minItemLevel))) : null;
+    const minItemLevel = body.minItemLevel != null
+      ? parseSafeNumber(body.minItemLevel, { fallback: 0, min: 0 })
+      : null;
 
     const noMythic = parseBool(body.noMythic, false);
     const noCraftedBestEffort = parseBool(body.noCraftedBestEffort, false);
