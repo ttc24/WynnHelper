@@ -205,7 +205,6 @@ function renderSlots() {
 
     async function doSearch() {
       const q = input.value.trim();
-      if (!q) { closeList(); return; }
 
       const params = new URLSearchParams({
         q,
