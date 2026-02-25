@@ -19,7 +19,6 @@ const state = {
   rarityEnabled: new Set(),
   selected: {},
   locks: {},
-  targetSlot: "helmet", // default
   tomes: [],
 
   lastResponse: null,
@@ -66,6 +65,7 @@ function bonusStr(arr) {
 
 function gatherPayload() {
   const rarities = Array.from(state.rarityEnabled);
+  const targetSlot = deriveTargetSlot();
 
   return {
     level: Number(el("level").value),
@@ -88,12 +88,31 @@ function gatherPayload() {
 
     selected: state.selected,
     locks: state.locks,
-    targetSlot: state.targetSlot,
+    targetSlot,
     tomes: state.tomes,
 
     debug: el("debug").checked,
     debugLimit: Number(el("debugLimit").value),
   };
+}
+
+function getMode() {
+  return el("modeSwap")?.checked ? "swap" : "fill";
+}
+
+function normalizeSwapSlot(swapKey) {
+  if (!swapKey) return "";
+  return (swapKey === "ring1" || swapKey === "ring2") ? "ring" : swapKey;
+}
+
+function deriveTargetSlot() {
+  if (getMode() !== "swap") return "";
+  return normalizeSwapSlot(el("swapKey")?.value || "");
+}
+
+function syncModeUI() {
+  const swapMode = getMode() === "swap";
+  el("swapBox").style.display = swapMode ? "flex" : "none";
 }
 
 async function apiJson(url, opts) {
@@ -161,22 +180,6 @@ function renderSlots() {
   for (const s of slotKeys) {
     const meta = document.createElement("div");
     meta.className = "slotMeta";
-
-    // target radio (one per slot)
-    const targetLab = document.createElement("label");
-    targetLab.className = "pill";
-    const r = document.createElement("input");
-    r.type = "radio";
-    r.name = "targetSlot";
-    r.checked = state.targetSlot === s.slot;
-    r.addEventListener("change", () => {
-      state.targetSlot = s.slot;
-      renderSlots(); // updates checks
-      refresh();
-    });
-    targetLab.appendChild(r);
-    targetLab.appendChild(document.createTextNode(`Target ${s.label}`));
-    meta.appendChild(targetLab);
 
     // lock checkbox (per slot key)
     const lockLab = document.createElement("label");
@@ -405,7 +408,12 @@ function renderResults(results, targetSlot) {
 
     // current item name for compare (for target slot)
     const currentName = (() => {
-      if (!targetSlot || slot !== targetSlot) return null;
+      if (!targetSlot) {
+        if (slot === "ring") return state.selected.ring1 || state.selected.ring2 || null;
+        const fillKey = slotKeys.find((x) => x.slot === slot)?.key;
+        return fillKey ? state.selected[fillKey] || null : null;
+      }
+      if (slot !== targetSlot) return null;
       // pick the first matching selected key
       const k = slotKeys.find((x) => x.slot === slot)?.key;
       if (!k) return null;
@@ -618,6 +626,17 @@ function wireControls() {
   ];
   for (const id of refreshers) el(id).addEventListener("change", refresh);
 
+  const onModeChange = () => {
+    syncModeUI();
+    refresh();
+  };
+
+  el("modeFill").addEventListener("change", onModeChange);
+  el("modeSwap").addEventListener("change", onModeChange);
+  el("swapKey").addEventListener("change", () => {
+    if (getMode() === "swap") refresh();
+  });
+
   el("refresh").addEventListener("click", refresh);
 
   el("clearAll").addEventListener("click", () => {
@@ -703,6 +722,7 @@ async function solveBuild() {
   await initHealth();
   renderTomes();
   renderSlots();
+  syncModeUI();
   wireCompareDialog();
   wireTomeSearch();
   wireControls();
