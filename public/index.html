@@ -52,9 +52,28 @@
       box-shadow:0 18px 40px rgba(0,0,0,.35);
     }
     .suggestItem { padding:.55rem .7rem; cursor:pointer; display:flex; justify-content:space-between; gap:.6rem; }
+    .suggestItem > span,
+    .slotRow .small,
+    .badge {
+      word-break: normal;
+      overflow-wrap: normal;
+    }
+    .suggestItem > span:first-child {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
     .suggestItem:hover, .suggestItem.active { background: rgba(109,124,255,.10); }
     .badge { font-size:.78rem; padding:.12rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.09); }
-    .resultsGrid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .resultsGrid {
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1rem;
+      max-height: 72vh;
+      overflow-y: auto;
+      padding-right: .25rem;
+      align-content: start;
+    }
     .resultItem { border-bottom:1px solid rgba(255,255,255,.10); padding:.6rem .6rem; }
     .resultItem:last-child { border-bottom:none; }
     .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
