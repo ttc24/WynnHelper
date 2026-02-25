@@ -167,6 +167,11 @@ function syncModeUI() {
   el("swapBox").style.display = swapMode ? "flex" : "none";
 }
 
+function setText(id, text) {
+  const node = el(id);
+  if (node) node.textContent = text;
+}
+
 async function apiJson(url, opts) {
   const res = await fetch(url, opts);
   const json = await res.json().catch(() => ({}));
@@ -196,8 +201,8 @@ function setHealthLoadFailure(err) {
 
 function setHealthRetryStatus(prefix = "Health check failed") {
   const msg = `${prefix}. Core controls are available; press Refresh or Force DB reload to retry item data.`;
-  const status = el("status");
-  if (status) status.textContent = msg;
+  setText("status", msg);
+  setText("statusQuick", "Retry available in Utility panel → Debug + maintenance.");
 }
 
 async function retryHealthLoad() {
@@ -467,10 +472,12 @@ async function refresh() {
   const seq = ++refreshSeq;
 
   try {
-    el("status").textContent = "Loading…";
-    el("alloc").textContent = "";
-    el("setSynergy").textContent = "";
+    setText("status", "Loading…");
+    setText("statusQuick", "");
+    setText("alloc", "");
+    setText("setSynergy", "");
     el("results").innerHTML = "";
+    el("notes").innerHTML = "";
     el("debugBox").innerHTML = "";
 
     const payload = gatherPayload();
@@ -486,7 +493,10 @@ async function refresh() {
 
     const b = json.budget;
     const base = json.baseline;
-    el("status").textContent = `Budget ${b} | Baseline spend ${base.finalSpend} | Remaining ${base.remainingSP} | Equip-order ${base.equipOrderOk ? "OK" : "NO"}`;
+    setText("status", `Budget ${b} | Baseline spend ${base.finalSpend} | Remaining ${base.remainingSP} | Equip-order ${base.equipOrderOk ? "OK" : "NO"}`);
+    const slotsWithResults = Object.keys(json.results || {}).length;
+    const noteCount = Array.isArray(json.notes) ? json.notes.length : 0;
+    setText("statusQuick", `Showing ${slotsWithResults} slot group${slotsWithResults === 1 ? "" : "s"}. Notes: ${noteCount}.`);
 
     // allocation preview
     if (json.allocationPreview?.length) {
@@ -494,16 +504,16 @@ async function refresh() {
         const v = a.alloc;
         return `${a.name}: used ${a.used}, rem ${a.remaining} | STR ${v.strength} DEX ${v.dexterity} INT ${v.intelligence} DEF ${v.defence} AGI ${v.agility}`;
       });
-      el("alloc").textContent = "Allocation preview:\n" + top3.join("\n");
+      setText("alloc", "Allocation preview:\n" + top3.join("\n"));
     } else {
-      el("alloc").textContent = "Allocation preview: (build invalid / over budget)";
+      setText("alloc", "Allocation preview: (build invalid / over budget)");
     }
 
     // set synergy
     const sy = json.setSynergy;
     if (sy && sy.count) {
       const groups = Object.entries(sy.groups || {}).map(([k, v]) => `${k}: ${v.length} (${v.join(", ")})`);
-      el("setSynergy").textContent = `Set synergy: ${sy.count} set items\n` + groups.join("\n");
+      setText("setSynergy", `Set synergy: ${sy.count} set items\n` + groups.join("\n"));
     }
 
     // notes
@@ -534,13 +544,15 @@ async function refresh() {
 
       debugBox.appendChild(heading);
       debugBox.appendChild(details);
+      setText("statusQuick", `${el("statusQuick")?.textContent || ""} Debug reasons loaded.`.trim());
     }
 
     renderResults(json.results, payload.targetSlot, payload.targetSlotKey);
   } catch (e) {
     if (seq !== refreshSeq) return;
-    el("status").textContent = `Error: ${e.message || e}`;
-    el("alloc").textContent = "If this says DB fetch failed, hit “Force DB reload”.";
+    setText("status", `Error: ${e.message || e}`);
+    setText("statusQuick", "If this is a DB fetch error, use Utility panel → Debug + maintenance → Force DB reload.");
+    setText("alloc", "If this says DB fetch failed, hit “Force DB reload”.");
   } finally {
     if (seq !== refreshSeq) return;
   }
