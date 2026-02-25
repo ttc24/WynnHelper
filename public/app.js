@@ -14,6 +14,9 @@ const slotKeys = [
 
 const el = (id) => document.getElementById(id);
 
+let refreshSeq = 0;
+let refreshTimer = null;
+
 const state = {
   rarities: [],
   rarityEnabled: new Set(),
@@ -428,6 +431,8 @@ function renderSlots() {
 }
 
 async function refresh() {
+  const seq = ++refreshSeq;
+
   try {
     el("status").textContent = "Loading…";
     el("alloc").textContent = "";
@@ -441,6 +446,8 @@ async function refresh() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    if (seq !== refreshSeq) return;
 
     state.lastResponse = json;
 
@@ -498,9 +505,20 @@ async function refresh() {
 
     renderResults(json.results, payload.targetSlot, payload.targetSlotKey);
   } catch (e) {
+    if (seq !== refreshSeq) return;
     el("status").textContent = `Error: ${e.message || e}`;
     el("alloc").textContent = "If this says DB fetch failed, hit “Force DB reload”.";
+  } finally {
+    if (seq !== refreshSeq) return;
   }
+}
+
+function scheduleRefresh(delay = 140) {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    refresh();
+  }, delay);
 }
 
 function renderResults(results, targetSlot, targetSlotKey = "") {
@@ -738,12 +756,19 @@ function wireTomeSearch() {
 }
 
 function wireControls() {
-  const refreshers = [
-    "level","class","extraPoints","strictWeaponClass",
-    "searchMode","sortBy","minItemLevel","limit",
-    "noMythic","noCrafted","noNegItem","noNegNet","mustGiveStat","minImprove","debug","debugLimit"
+  const immediateRefreshers = [
+    "class","strictWeaponClass","searchMode","sortBy",
+    "noMythic","noCrafted","noNegItem","noNegNet","debug"
   ];
-  for (const id of refreshers) el(id).addEventListener("change", refresh);
+  for (const id of immediateRefreshers) el(id).addEventListener("change", refresh);
+
+  const debouncedRefreshers = [
+    "level","extraPoints","minItemLevel","limit","mustGiveStat","minImprove","debugLimit"
+  ];
+  for (const id of debouncedRefreshers) {
+    el(id).addEventListener("input", () => scheduleRefresh());
+    el(id).addEventListener("change", () => scheduleRefresh(0));
+  }
 
   const onModeChange = () => {
     syncModeUI();
