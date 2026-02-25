@@ -65,10 +65,15 @@ function parseBool(value, fallback) {
 
 function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
   if (!targetSlot) return null;
+
+  if (requestedKey) {
+    const requested = GEAR_SLOT_KEYS.find((s) => s.key === requestedKey);
+    if (requested && requested.slot === targetSlot) return requestedKey;
+  }
+
   if (targetSlot !== "ring") return targetSlot;
 
   const ringKeys = ["ring1", "ring2"];
-  if (ringKeys.includes(requestedKey)) return requestedKey;
 
   for (const key of ringKeys) {
     if (selectedItemsByKey[key] && !Boolean(locks[key])) return key;
@@ -83,9 +88,9 @@ function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
 
 function isTargetEntry(slotEntry, targetSlot, targetKey) {
   if (!targetSlot) return false;
+  if (targetKey) return slotEntry.key === targetKey;
   if (slotEntry.slot !== targetSlot) return false;
-  if (targetSlot !== "ring") return true;
-  return slotEntry.key === targetKey;
+  return true;
 }
 
 function passesFilters(it, ctx) {
