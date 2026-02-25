@@ -79,7 +79,7 @@ function makeSuggestItem(it) {
   name.textContent = it.name;
 
   const meta = document.createElement("span");
-  meta.className = "small";
+  meta.className = "small suggestMeta";
   meta.textContent = `lvl ${it.levelReq}, ${it.rarity}`;
 
   div.appendChild(name);
@@ -537,9 +537,7 @@ async function refresh() {
       heading.textContent = "Why excluded (total counts + partial samples):";
 
       const details = document.createElement("div");
-      details.className = "small mono";
-      details.style.whiteSpace = "pre-wrap";
-      details.style.marginTop = ".35rem";
+      details.className = "small mono preWrap spacedTiny";
       details.textContent = `${countsLine || "(no exclusions captured)"}\n\n${sample || ""}`;
 
       debugBox.appendChild(heading);
@@ -573,14 +571,15 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
   const slots = Object.keys(results || {});
   for (const slot of slots) {
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = "resultSlotCard";
 
     const h = document.createElement("h5");
-    h.style.marginBottom = ".25rem";
+    h.className = "resultSlotTitle";
     h.textContent = `Slot: ${slot}`;
     card.appendChild(h);
 
     const list = document.createElement("div");
+    list.className = "resultSlotList";
     const items = results[slot] || [];
 
     const targetKey = targetSlot && slot === targetSlot
@@ -601,10 +600,7 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
       const left = document.createElement("div");
 
       const nameLine = document.createElement("div");
-      nameLine.style.display = "flex";
-      nameLine.style.gap = ".4rem";
-      nameLine.style.flexWrap = "wrap";
-      nameLine.style.alignItems = "center";
+      nameLine.className = "resultNameLine";
 
       const name = document.createElement("strong");
       name.textContent = it.name;
@@ -623,9 +619,7 @@ function renderResults(results, targetSlot, targetSlotKey = "") {
       left.appendChild(meta);
 
       const right = document.createElement("div");
-      right.style.display = "flex";
-      right.style.gap = ".4rem";
-      right.style.flexWrap = "wrap";
+      right.className = "resultActions";
 
       const compareBtn = document.createElement("button");
       compareBtn.className = "secondary btnTiny";

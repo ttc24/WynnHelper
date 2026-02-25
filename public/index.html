@@ -7,98 +7,201 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
   <style>
     :root{
-      --pico-primary: #8f98ff;
-      --pico-primary-hover: #7f89ff;
-      --pico-primary-focus: rgba(143,152,255,.35);
-      --pico-card-border-color: rgba(255,255,255,.12);
-      --text-soft: rgba(235,241,255,.72);
-      --surface-1: rgba(17,21,35,.86);
-      --surface-2: rgba(10,13,24,.95);
-      --surface-3: rgba(26,33,51,.88);
+      --color-bg-0:#070b15;
+      --color-bg-1:#0e1527;
+      --color-bg-2:#131d33;
+      --color-surface-1:rgba(14,20,36,.86);
+      --color-surface-2:rgba(12,17,30,.96);
+      --color-surface-3:rgba(23,31,53,.90);
+      --color-surface-soft:rgba(255,255,255,.05);
+      --color-border-strong:rgba(164,182,255,.3);
+      --color-border:rgba(164,182,255,.2);
+      --color-border-soft:rgba(255,255,255,.12);
+      --color-text:#e8edff;
+      --color-text-soft:rgba(233,239,255,.74);
+      --color-text-muted:rgba(204,214,255,.58);
+      --color-accent:#8f98ff;
+      --color-accent-strong:#7782ff;
+      --color-accent-soft:rgba(143,152,255,.2);
+      --color-focus:rgba(143,152,255,.45);
+      --color-success:rgba(118,214,178,.85);
+
+      --font-sans:Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --text-xs:.78rem;
+      --text-sm:.9rem;
+      --text-base:1rem;
+      --text-lg:1.08rem;
+      --text-xl:1.35rem;
+      --weight-normal:400;
+      --weight-medium:500;
+      --weight-semibold:600;
+      --weight-bold:700;
+      --leading-tight:1.2;
+      --leading-base:1.45;
+
+      --space-1:.25rem;
+      --space-2:.5rem;
+      --space-3:.75rem;
+      --space-4:1rem;
+      --space-5:1.25rem;
+      --space-6:1.5rem;
+      --space-7:2rem;
+
+      --radius-sm:8px;
+      --radius-md:12px;
+      --radius-lg:16px;
+      --radius-pill:999px;
+
+      --shadow-sm:0 8px 20px rgba(0,0,0,.22);
+      --shadow-md:0 16px 32px rgba(0,0,0,.28);
+      --shadow-lg:0 20px 48px rgba(0,0,0,.36);
+
+      --duration-fast:120ms;
+      --duration-base:180ms;
+      --easing-standard:cubic-bezier(.2,.8,.2,1);
+
+      --pico-primary: var(--color-accent);
+      --pico-primary-hover: var(--color-accent-strong);
+      --pico-primary-focus: var(--color-focus);
+      --pico-card-border-color: var(--color-border-soft);
     }
     body{
-      color: #e8edff;
+      font-family: var(--font-sans);
+      color: var(--color-text);
       background: radial-gradient(1200px 600px at 20% -10%, rgba(95,118,255,.34), transparent 60%),
                   radial-gradient(900px 500px at 90% 0%, rgba(74,166,226,.20), transparent 55%),
-                  linear-gradient(180deg, rgba(9,12,22,1), rgba(6,8,16,1));
+                  linear-gradient(180deg, var(--color-bg-1), var(--color-bg-0));
+      line-height: var(--leading-base);
     }
-    header { padding: 1rem 0 .5rem; }
-    .grid2 { display: grid; grid-template-columns: 460px 1fr; gap: 1rem; align-items: start; }
-    .stack { display:grid; gap:1rem; align-content:start; }
+    main.container{ padding-block: var(--space-4) var(--space-7); }
+    header.siteHeader { padding: var(--space-2) 0 var(--space-4); }
+    .siteTitle { margin: 0 0 var(--space-1); font-size: var(--text-xl); font-weight: var(--weight-bold); line-height: var(--leading-tight); }
+    .leadText { margin: 0; max-width: 70ch; }
+
+    .grid2 { display: grid; grid-template-columns: 460px 1fr; gap: var(--space-4); align-items: start; }
+    .stack { display:grid; gap:var(--space-4); align-content:start; }
+
+    .sectionCard,
     .card {
-      border: 1px solid var(--pico-card-border-color);
-      border-radius: 14px;
-      padding: 1rem;
-      background: var(--surface-1);
-      box-shadow: 0 14px 40px rgba(0,0,0,.36);
-      backdrop-filter: blur(8px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      background: linear-gradient(180deg, rgba(31,42,70,.45), rgba(16,23,40,.88));
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
     }
-    .small { font-size: .9rem; color: var(--text-soft); }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace; }
-    .row { display:flex; gap:.75rem; flex-wrap: wrap; align-items: end; }
-    .slotRow { display:grid; grid-template-columns: 95px minmax(0,1fr) auto; gap:.5rem; align-items:center; margin-bottom:.55rem; }
+    .sectionCardHeader { display:flex; justify-content:space-between; align-items:center; gap: var(--space-3); margin-bottom: var(--space-2); }
+
+    .small { font-size: var(--text-sm); color: var(--color-text-soft); }
+    .mono { font-family: var(--font-mono); }
+    .row { display:flex; gap:var(--space-3); flex-wrap: wrap; align-items: end; margin-top: var(--space-2); }
+    .row:first-child { margin-top: 0; }
+    .controlLabel { min-width: 180px; margin-bottom: 0; font-size: var(--text-sm); color: var(--color-text-soft); display: grid; gap: var(--space-1); }
+    .controlLabel.isWide { min-width: 220px; }
+    .controlLabel.isNarrow { min-width: 120px; }
+    .controlLabel.isCompact { min-width: 150px; }
+    .isHidden { display:none; }
+    .scrollBox { min-height: 70px; max-height: 240px; overflow:auto; }
+
+    .slotRow { display:grid; grid-template-columns: 95px minmax(0,1fr) auto; gap:var(--space-2); align-items:center; margin-bottom:var(--space-3); }
     .slotRow input { margin:0; }
-    .slotHead { display:flex; justify-content: space-between; align-items:center; margin-bottom:.5rem; }
-    .pillRow { display:flex; flex-wrap:wrap; gap:.4rem; }
-    .pill { display:inline-flex; align-items:center; gap:.35rem; padding:.2rem .5rem; border:1px solid rgba(255,255,255,.16); border-radius:999px; background: rgba(255,255,255,.07); }
+    .slotHead { display:flex; justify-content: space-between; align-items:center; gap: var(--space-3); margin-bottom:var(--space-2); }
+    .pillRow { display:flex; flex-wrap:wrap; gap:var(--space-2); }
+    .pill { display:inline-flex; align-items:center; gap:var(--space-2); padding:var(--space-1) var(--space-3); border:1px solid var(--color-border); border-radius:var(--radius-pill); background: rgba(255,255,255,.07); transition: background var(--duration-base) var(--easing-standard), border-color var(--duration-base) var(--easing-standard); }
+    .pill:hover { background: rgba(255,255,255,.12); border-color: var(--color-border-strong); }
+
     .suggest { position:relative; }
     .suggestList{
       position:absolute; z-index:50; left:0; right:0; top:calc(100% + 4px);
-      border:1px solid rgba(255,255,255,.12);
-      background: var(--surface-2);
-      border-radius:12px;
+      border:1px solid var(--color-border-soft);
+      background: var(--color-surface-2);
+      border-radius:var(--radius-md);
       overflow:hidden;
       max-height:280px;
       overflow-y:auto;
-      box-shadow:0 18px 40px rgba(0,0,0,.35);
+      box-shadow:var(--shadow-lg);
     }
-    .suggestItem { padding:.55rem .7rem; cursor:pointer; display:flex; justify-content:space-between; gap:.6rem; }
+    .suggestItem { padding:var(--space-2) var(--space-3); cursor:pointer; display:flex; justify-content:space-between; gap:var(--space-3); transition: background var(--duration-fast) var(--easing-standard); }
     .suggestItem > span,
     .slotRow .small,
-    .badge {
-      word-break: normal;
-      overflow-wrap: normal;
-    }
-    .suggestItem > span:first-child {
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-    }
-    .suggestItem:hover, .suggestItem.active { background: rgba(109,124,255,.10); }
-    .badge { font-size:.78rem; padding:.12rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.09); }
+    .badge { word-break: normal; overflow-wrap: normal; }
+    .suggestItem > span:first-child { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+    .suggestItem:hover, .suggestItem.active { background: var(--color-accent-soft); }
+    .suggestMeta { color: var(--color-text-muted); }
+
+    .badge { font-size:var(--text-xs); padding:var(--space-1) var(--space-2); border-radius:var(--radius-pill); border:1px solid var(--color-border); background: rgba(255,255,255,.08); color: var(--color-text-soft); }
     .resultsGrid {
       display:grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1rem;
+      gap: var(--space-4);
       max-height: 72vh;
       overflow-y: auto;
-      padding-right: .25rem;
+      padding-right: var(--space-1);
       align-content: start;
+      margin-top: var(--space-3);
     }
-    .resultItem { border-bottom:1px solid rgba(255,255,255,.10); padding:.6rem .6rem; }
-    .resultItem:last-child { border-bottom:none; }
-    .resultTop { display:flex; justify-content:space-between; gap:.7rem; align-items:flex-start; }
-    .btnTiny { padding:.35rem .55rem; font-size:.86rem; white-space: nowrap; min-width: 72px; }
-    .resultTop .btnTiny:disabled {
+    .resultSlotCard { display:grid; gap: var(--space-2); border:1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-1); padding: var(--space-3); box-shadow: var(--shadow-sm); }
+    .resultSlotList { display:grid; gap: var(--space-2); }
+    .resultSlotTitle { margin:0; font-size: var(--text-lg); font-weight: var(--weight-semibold); color: var(--color-text); }
+    .resultItem { border:1px solid var(--color-border-soft); border-radius: var(--radius-sm); padding:var(--space-3); background: var(--color-surface-soft); margin-top: var(--space-2); }
+    .resultTop { display:flex; justify-content:space-between; gap:var(--space-3); align-items:flex-start; }
+    .resultNameLine { display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:center; }
+    .resultActions { display:flex; gap:var(--space-2); flex-wrap:wrap; }
+
+    button, .btnTiny {
+      border-radius: var(--radius-sm);
+      transition: transform var(--duration-fast) var(--easing-standard), background var(--duration-base) var(--easing-standard), border-color var(--duration-base) var(--easing-standard), box-shadow var(--duration-base) var(--easing-standard);
+    }
+    .btnTiny { padding:.42rem .65rem; font-size:var(--text-sm); font-weight: var(--weight-medium); white-space: nowrap; min-width: 72px; }
+    button:hover:not(:disabled), .pill:has(input:focus-visible) { transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    .btnTiny:disabled, .resultTop .btnTiny:disabled {
       opacity: .5;
       cursor: not-allowed;
       filter: grayscale(.25);
+      transform: none;
     }
-    .mutedBox { border:1px dashed rgba(255,255,255,.20); border-radius:12px; padding:.6rem .7rem; background: rgba(255,255,255,.05); }
-    .workflowStep { margin-bottom: .85rem; }
+
+    input, select, textarea {
+      background: var(--color-surface-3) !important;
+      color: #eef2ff !important;
+      border:1px solid var(--color-border) !important;
+      border-radius: var(--radius-sm) !important;
+      margin-bottom: 0;
+      transition: border-color var(--duration-base) var(--easing-standard), box-shadow var(--duration-base) var(--easing-standard);
+    }
+    input:focus, select:focus, textarea:focus, button:focus-visible, summary:focus-visible, .suggestItem:focus-visible {
+      outline: none;
+      border-color: var(--color-accent) !important;
+      box-shadow: 0 0 0 3px var(--color-focus);
+    }
+
+    .mutedBox,
+    .auxSurface { border:1px dashed var(--color-border); border-radius:var(--radius-md); padding:var(--space-3); background: var(--color-surface-soft); }
+    .debugBox { margin-top: var(--space-2); }
+    .workflowStep { margin-bottom: var(--space-5); }
     .workflowStep:last-child { margin-bottom: 0; }
-    .stepTitle { display:flex; gap:.45rem; align-items:center; margin:0 0 .45rem 0; }
-    .stepBadge { font-size:.75rem; padding:.1rem .45rem; border-radius:999px; border:1px solid rgba(255,255,255,.2); color:var(--text-soft); }
-    .metaGrid { display:grid; gap:.55rem; margin-top:.6rem; }
+    .stepTitle { display:flex; gap:var(--space-2); align-items:center; margin:0 0 var(--space-2) 0; }
+    .stepHeading { margin:0; font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+    .stepBadge { font-size:var(--text-xs); padding:var(--space-1) var(--space-2); border-radius:var(--radius-pill); border:1px solid var(--color-border); color:var(--color-text-soft); }
+    .metaGrid { display:grid; gap:var(--space-2); margin-top:var(--space-2); }
     .quickLine { margin:0; }
-    .intentGroup { margin-top:.7rem; }
-    .intentGroup .small { margin:0 0 .35rem 0; }
-    dialog { border:none; border-radius: 16px; padding: 0; width: min(760px, 95vw); }
-    dialog .dwrap { padding: 1rem; }
-    dialog::backdrop { background: rgba(0,0,0,.55); }
-    input, select, textarea { background: var(--surface-3) !important; color: #eef2ff !important; border-color: rgba(255,255,255,.18) !important; }
-    summary { color: #eff3ff; }
-    .slotMeta { margin-bottom: .3rem; display:flex; gap:.5rem; flex-wrap: wrap; }
+    .intentGroup { margin-top:var(--space-3); }
+    .intentGroup .small { margin:0 0 var(--space-2) 0; }
+    .slotMeta { margin-bottom: var(--space-2); display:flex; gap:var(--space-2); flex-wrap: wrap; }
+    .detailsPanel { margin-top: var(--space-3); }
+    .spacedTop { margin-top: var(--space-3); }
+    .spacedTiny { margin-top: var(--space-2); }
+    .preWrap { white-space: pre-wrap; }
+    .dialogRowBetween { justify-content: space-between; align-items: center; }
+    .dialogRowEnd { justify-content: flex-end; }
+
+    dialog { border:1px solid var(--color-border); border-radius: var(--radius-lg); padding: 0; width: min(760px, 95vw); background: var(--color-surface-2); color: var(--color-text); box-shadow: var(--shadow-lg); }
+    dialog .dwrap { padding: var(--space-5); }
+    dialog::backdrop { background: rgba(4,7,14,.68); }
+    summary { color: #eff3ff; font-weight: var(--weight-medium); }
+
     @media (max-width: 1100px) {
       .grid2 { grid-template-columns: 1fr; }
       .resultsGrid { grid-template-columns: 1fr; }
@@ -109,28 +212,28 @@
 </head>
 <body>
   <main class="container">
-    <header>
-      <h2 style="margin-bottom:.25rem;">Wynncraft Helper</h2>
-      <p class="small" style="margin-top:0;">
+    <header class="siteHeader">
+      <h2 class="siteTitle">Wynncraft Helper</h2>
+      <p class="small leadText">
         Pick items on the left. Get compatible suggestions on the right. Swap mode helps fix broken builds fast.
       </p>
     </header>
 
     <div class="grid2">
-      <section class="card">
+      <section class="sectionCard">
         <div class="workflowStep">
           <div class="stepTitle">
             <span class="stepBadge">Step 1</span>
-            <h4 style="margin:0;">Player + mode</h4>
+            <h4 class="stepHeading">Player + mode</h4>
           </div>
 
           <div class="row">
-          <label style="min-width: 120px;">
+          <label class="controlLabel isNarrow">
             Level
             <input id="level" type="number" min="1" max="106" value="106" />
           </label>
 
-          <label style="min-width: 190px;">
+          <label class="controlLabel">
             Class
             <select id="class">
               <option value="">(any)</option>
@@ -142,12 +245,12 @@
             </select>
           </label>
 
-          <label style="min-width: 220px;">
+          <label class="controlLabel isWide">
             Extra SP (quests/tomes/etc.)
             <input id="extraPoints" type="number" min="0" max="999" value="0" />
           </label>
 
-          <label style="min-width: 220px;">
+          <label class="controlLabel isWide">
             Weapon class lock
             <select id="strictWeaponClass">
               <option value="1">Yes</option>
@@ -160,8 +263,8 @@
             <label><input type="radio" name="mode" value="fill" id="modeFill" checked /> Fill missing slots</label>
             <label><input type="radio" name="mode" value="swap" id="modeSwap" /> Swap one slot</label>
           </div>
-          <div id="swapBox" class="row" style="display:none; margin-top:.35rem;">
-            <label style="min-width: 220px;">
+          <div id="swapBox" class="row isHidden">
+            <label class="controlLabel isWide">
               Active slot
               <select id="swapKey">
                 <option value="helmet">Helmet</option>
@@ -176,16 +279,16 @@
               </select>
             </label>
           </div>
-          <p class="small" style="margin:.35rem 0 0 0;">Fill mode scans all missing slots. Swap mode focuses only the active slot.</p>
+          <p class="small spacedTiny">Fill mode scans all missing slots. Swap mode focuses only the active slot.</p>
         </div>
 
         <hr/>
 
         <div class="workflowStep">
           <div class="slotHead">
-            <div class="stepTitle" style="margin-bottom:0;">
+            <div class="stepTitle">
               <span class="stepBadge">Step 2</span>
-              <h4 style="margin:0;">Gear selection</h4>
+              <h4 class="stepHeading">Gear selection</h4>
             </div>
             <button id="clearAll" class="secondary btnTiny">Clear all</button>
           </div>
@@ -194,13 +297,13 @@
           <div id="slots"></div>
         </div>
 
-        <details style="margin-top:.8rem;">
+        <details class="detailsPanel">
           <summary>Advanced filters</summary>
 
           <div class="intentGroup">
             <p class="small">Search behavior</p>
             <div class="row">
-            <label style="min-width: 180px;">
+            <label class="controlLabel">
               Match
               <select id="searchMode">
                 <option value="contains">Contains</option>
@@ -209,7 +312,7 @@
               </select>
             </label>
 
-            <label style="min-width: 180px;">
+            <label class="controlLabel">
               Sort by
               <select id="sortBy">
                 <option value="bestRemaining">Best remaining SP</option>
@@ -229,12 +332,12 @@
           <div class="intentGroup">
             <p class="small">Quality constraints</p>
             <div class="row">
-            <label style="min-width: 170px;">
+            <label class="controlLabel">
               Min level
               <input id="minItemLevel" type="number" min="0" max="106" value="0" />
             </label>
 
-            <label style="min-width: 160px;">
+            <label class="controlLabel">
               Results / slot
               <input id="limit" type="number" min="10" max="500" value="150" />
             </label>
@@ -247,14 +350,14 @@
             <label><input id="noNegNet" type="checkbox"/> Block negative net stats</label>
           </div>
 
-          <div class="small" style="margin-top:.4rem;">Allowed rarities</div>
-          <div id="rarityBox" class="pillRow" style="margin-top:.4rem;"></div>
+          <div class="small spacedTiny">Allowed rarities</div>
+          <div id="rarityBox" class="pillRow spacedTiny"></div>
           </div>
 
           <div class="intentGroup">
             <p class="small">Stat goals</p>
             <div class="row">
-            <label style="min-width: 240px;">
+            <label class="controlLabel isWide">
               Require bonus to
               <select id="mustGiveStat">
                 <option value="">(none)</option>
@@ -266,7 +369,7 @@
               </select>
             </label>
 
-            <label style="min-width: 260px;">
+            <label class="controlLabel isWide">
               Min Δ remaining SP
               <input id="minImprove" type="number" value="0" />
             </label>
@@ -277,10 +380,10 @@
       </section>
 
       <div class="stack">
-        <section class="card">
+        <section class="sectionCard">
           <div class="stepTitle">
             <span class="stepBadge">Step 3</span>
-            <h4 style="margin:0;">Suggestions + results</h4>
+            <h4 class="stepHeading">Suggestions + results</h4>
           </div>
 
           <div class="metaGrid">
@@ -288,56 +391,56 @@
             <p id="statusQuick" class="small quickLine"></p>
           </div>
 
-          <div id="results" class="resultsGrid" style="margin-top:.7rem;"></div>
+          <div id="results" class="resultsGrid"></div>
 
-          <details style="margin-top:.8rem;">
+          <details class="detailsPanel">
             <summary>Build details</summary>
-            <div id="alloc" class="small mono" style="white-space: pre-wrap; margin-top:.55rem;"></div>
-            <div id="setSynergy" class="small mono" style="white-space: pre-wrap; margin-top:.55rem;"></div>
-            <div id="notes" class="small" style="margin-top:.5rem;"></div>
+            <div id="alloc" class="small mono preWrap spacedTiny"></div>
+            <div id="setSynergy" class="small mono preWrap spacedTiny"></div>
+            <div id="notes" class="small spacedTiny"></div>
           </details>
         </section>
 
-        <section class="card">
-          <h4 style="margin-bottom:.35rem;">Utility panel</h4>
+        <section class="sectionCard">
+          <h4 class="stepHeading">Utility panel</h4>
 
           <details>
             <summary>Tomes</summary>
-            <div class="suggest" style="margin:.6rem 0 .5rem;">
+            <div class="suggest spacedTiny">
               <input id="tomeInput" placeholder="Search tomes..." autocomplete="off" />
-              <div id="tomeList" class="suggestList" style="display:none;"></div>
+              <div id="tomeList" class="suggestList isHidden"></div>
             </div>
-            <div class="row" style="margin-bottom:.5rem;">
+            <div class="row">
               <button id="clearTomes" class="secondary btnTiny">Clear tomes</button>
             </div>
             <div id="tomePills" class="pillRow"></div>
           </details>
 
-          <details style="margin-top:.7rem;">
+          <details class="detailsPanel">
             <summary>Explain / solve tools</summary>
-            <div class="row" style="margin-top:.6rem;">
-              <label style="min-width: 260px;">
+            <div class="row spacedTiny">
+              <label class="controlLabel isWide">
                 Explain item
                 <input id="explainName" placeholder="Exact item name" />
               </label>
               <button id="explainBtn" class="secondary btnTiny">Explain</button>
               <button id="solve" class="btnTiny">Solve full build</button>
             </div>
-            <pre id="explainOut" class="small mono mutedBox" style="margin-top:.5rem; min-height: 70px; max-height: 240px; overflow:auto;"></pre>
+            <pre id="explainOut" class="small mono mutedBox spacedTiny scrollBox"></pre>
           </details>
 
-          <details style="margin-top:.7rem;">
+          <details class="detailsPanel">
             <summary>Debug + maintenance</summary>
-            <div class="row" style="margin-top:.6rem;">
+            <div class="row spacedTiny">
               <label><input id="debug" type="checkbox"/> Collect exclusion reasons</label>
-              <label style="min-width: 150px;">
+              <label class="controlLabel isCompact">
                 Sample cap
                 <input id="debugLimit" type="number" min="0" max="200" value="80" />
               </label>
               <button id="reloadDb" class="secondary btnTiny">Force DB reload</button>
               <button id="refresh" class="btnTiny">Refresh</button>
             </div>
-            <div id="debugBox" class="small" style="margin-top:.5rem;"></div>
+            <div id="debugBox" class="small mutedBox debugBox"></div>
           </details>
         </section>
       </div>
@@ -345,12 +448,12 @@
 
     <dialog id="compareDlg">
       <div class="dwrap">
-        <div class="row" style="justify-content: space-between; align-items:center;">
+        <div class="row dialogRowBetween">
           <strong id="cmpTitle"></strong>
           <button id="cmpClose" class="secondary btnTiny">Close</button>
         </div>
-        <div id="cmpBody" class="small mono" style="white-space: pre-wrap; margin-top:.6rem;"></div>
-        <div class="row" style="justify-content:flex-end; margin-top:.8rem;">
+        <div id="cmpBody" class="small mono preWrap spacedTiny"></div>
+        <div class="row dialogRowEnd">
           <button id="cmpSwap" class="btnTiny">Swap</button>
         </div>
       </div>
