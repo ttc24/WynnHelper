@@ -379,7 +379,6 @@ export async function buildApiRouter({ cacheDir }) {
           negTradeoff: negSumArr(cand.bonusArr),
         });
 
-        if (compatible.length >= limit) break;
       }
 
       // sorting
@@ -398,7 +397,7 @@ export async function buildApiRouter({ cacheDir }) {
         return b.remainingAfter - a.remainingAfter || a.finalSpend - b.finalSpend || a.name.localeCompare(b.name);
       });
 
-      results[slot] = compatible;
+      results[slot] = compatible.slice(0, limit);
 
       if (debug && debugExcluded) {
         for (const ex of excludedSamples) {
