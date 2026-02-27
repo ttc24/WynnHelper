@@ -34,6 +34,7 @@ const state = {
   rarityEnabled: new Set(),
   healthReady: false,
   healthLoadError: null,
+  dataState: { degraded: false, warning: null, source: null },
   selected: {},
   locks: {},
   tomes: [],
@@ -188,7 +189,9 @@ async function apiJson(url, opts) {
   const res = await fetch(url, opts);
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.ok === false) {
-    throw new Error(json.error || `HTTP ${res.status}`);
+    const detail = json.details ? ` (${json.details})` : "";
+    const retry = json.retry ? ` ${json.retry}` : "";
+    throw new Error(`${json.error || `HTTP ${res.status}`}${detail}${retry}`.trim());
   }
   return json;
 }
@@ -200,7 +203,14 @@ async function initHealth() {
   state.rarityEnabled = new Set(rarities);
   state.healthReady = true;
   state.healthLoadError = null;
+  state.dataState = h.dataState || { degraded: false, warning: null, source: null };
   renderRarities();
+
+  if (state.dataState.degraded) {
+    const warn = state.dataState.warning || "Running with cached item data.";
+    setText("status", `${warn} Click Force DB reload to retry live data.`);
+    setText("statusQuick", "Degraded mode: stale cache in use. Utility panel → Debug + maintenance → Force DB reload.");
+  }
 }
 
 function setHealthLoadFailure(err) {
@@ -208,6 +218,7 @@ function setHealthLoadFailure(err) {
   state.healthLoadError = err;
   state.rarities = [];
   state.rarityEnabled = new Set();
+  state.dataState = { degraded: false, warning: null, source: null };
   renderRarities();
 }
 
@@ -509,10 +520,13 @@ async function refresh() {
 
     const b = json.budget;
     const base = json.baseline;
-    setText("status", `Budget ${b} | Baseline spend ${base.finalSpend} | Remaining ${base.remainingSP} | Equip-order ${base.equipOrderOk ? "OK" : "NO"}`);
+    const degraded = Boolean(json.dataState?.degraded);
+    const degradedStatus = degraded ? " | Degraded data (cached fallback)" : "";
+    setText("status", `Budget ${b} | Baseline spend ${base.finalSpend} | Remaining ${base.remainingSP} | Equip-order ${base.equipOrderOk ? "OK" : "NO"}${degradedStatus}`);
     const slotsWithResults = Object.keys(json.results || {}).length;
     const noteCount = Array.isArray(json.notes) ? json.notes.length : 0;
-    setText("statusQuick", `Showing ${slotsWithResults} slot group${slotsWithResults === 1 ? "" : "s"}. Notes: ${noteCount}.`);
+    const degradedNote = degraded ? " Degraded mode active — click Force DB reload to retry live data." : "";
+    setText("statusQuick", `Showing ${slotsWithResults} slot group${slotsWithResults === 1 ? "" : "s"}. Notes: ${noteCount}.${degradedNote}`);
 
     // allocation preview
     if (json.allocationPreview?.length) {

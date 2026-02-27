@@ -198,15 +198,35 @@ export async function buildApiRouter({ cacheDir }) {
   const db = new WynnDb({ cacheDir });
   const cache = new LRUCache(250);
 
-  await db.load();
+  function dataUnavailableJson(error) {
+    return {
+      ok: false,
+      code: "DATA_UNAVAILABLE",
+      error: "Item data unavailable",
+      details: String(error?.message ?? error),
+      retry: "Use Force DB reload and retry.",
+    };
+  }
+
+  async function ensureDbData(res) {
+    try {
+      return await db.load();
+    } catch (e) {
+      if (res) res.status(503).json(dataUnavailableJson(e));
+      return null;
+    }
+  }
 
   router.get("/health", async (_req, res) => {
-    try {
-      const d = await db.load();
-      res.json({ ok: true, itemCount: d.items.length, rarities: d.rarities });
-    } catch (e) {
-      res.status(500).json({ ok: false, error: String(e?.message ?? e) });
-    }
+    const d = await ensureDbData(res);
+    if (!d) return;
+
+    res.json({
+      ok: true,
+      itemCount: d.items.length,
+      rarities: d.rarities,
+      dataState: d.dataState,
+    });
   });
 
   router.post("/reload", async (_req, res) => {
@@ -224,7 +244,8 @@ export async function buildApiRouter({ cacheDir }) {
 
     const strictWeaponClass = String(req.query.strictWeaponClass ?? "0") === "1";
 
-    const d = await db.load();
+    const d = await ensureDbData(res);
+    if (!d) return;
     let pool = d.items;
 
     if (slot) pool = pool.filter((x) => x.slot === slot);
@@ -308,7 +329,8 @@ export async function buildApiRouter({ cacheDir }) {
     const budgetBase = skillBudgetFromLevel(level);
     const budget = budgetBase + extraPoints;
 
-    const d = await db.load();
+    const d = await ensureDbData(res);
+    if (!d) return;
 
     const ctx = {
       level, class: cls, strictWeaponClass,
@@ -557,6 +579,7 @@ export async function buildApiRouter({ cacheDir }) {
       results,
       debugExcluded,
       notes,
+      dataState: d.dataState,
     };
 
     cache.set(cacheKey, response);
@@ -593,7 +616,8 @@ export async function buildApiRouter({ cacheDir }) {
 
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
-    const d = await db.load();
+    const d = await ensureDbData(res);
+    if (!d) return;
     const cand = d.byName.get(itemName);
     if (!cand) return res.json({ ok: false, error: "Item not found" });
 
@@ -656,7 +680,7 @@ export async function buildApiRouter({ cacheDir }) {
     const baselineStats = computeBuildStats(baseline, budget, { perSkillCap: 100 });
 
     const reason = reasonFails(cand, ctx, fixed, [cand], baselineStats.finalSpend);
-    res.json({ ok: true, item: cand.name, passes: reason == null, reason });
+    res.json({ ok: true, item: cand.name, passes: reason == null, reason, dataState: d.dataState });
   });
 
   router.post("/solve", async (req, res) => {
@@ -691,7 +715,8 @@ export async function buildApiRouter({ cacheDir }) {
       max: MAX_RING_POOL_CAP,
     });
 
-    const d = await db.load();
+    const d = await ensureDbData(res);
+    if (!d) return;
 
     // lockedBySlot uses actual item objects
     const lockedBySlot = {};
@@ -737,11 +762,12 @@ export async function buildApiRouter({ cacheDir }) {
       ringPoolCap,
     });
 
-    if (!best) return res.json({ ok: true, found: false });
+    if (!best) return res.json({ ok: true, found: false, dataState: d.dataState });
 
     res.json({
       ok: true,
       found: true,
+      dataState: d.dataState,
       score: best.score,
       items: best.items.map((it) => ({ name: it.name, slot: it.slot, rarity: it.rarity, levelReq: it.levelReq })),
     });

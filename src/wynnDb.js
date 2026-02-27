@@ -61,12 +61,13 @@ export class WynnDb {
   constructor({ cacheDir }) {
     this.cacheFile = path.join(cacheDir, ".wynn_item_cache.json");
     this.norm = null;
+    this.lastLoadInfo = null;
   }
 
   async load({ force = false } = {}) {
     if (!force && this.norm) return this.norm;
 
-    const raw = await this.#loadRaw(force);
+    const { raw, loadInfo } = await this.#loadRaw(force);
     const items = [];
     const byName = new Map();
     const bySlot = new Map();
@@ -130,30 +131,82 @@ export class WynnDb {
 
     for (const arr of bySlot.values()) arr.sort((a, b) => a.name.localeCompare(b.name));
 
-    this.norm = { items, byName, bySlot, byRarity, rarities: Array.from(rarities).sort() };
+    this.lastLoadInfo = loadInfo;
+    this.norm = {
+      items,
+      byName,
+      bySlot,
+      byRarity,
+      rarities: Array.from(rarities).sort(),
+      dataState: {
+        degraded: Boolean(loadInfo?.degraded),
+        warning: loadInfo?.warning ?? null,
+        source: loadInfo?.source ?? "unknown",
+      },
+    };
     return this.norm;
   }
 
   async #loadRaw(force) {
-    if (!force) {
+    const readCache = () => {
       try {
         const st = fs.statSync(this.cacheFile);
-        const age = Date.now() - st.mtimeMs;
-        if (age < TTL_MS) return JSON.parse(fs.readFileSync(this.cacheFile, "utf8"));
-      } catch { /* ignore */ }
+        const raw = JSON.parse(fs.readFileSync(this.cacheFile, "utf8"));
+        const ageMs = Date.now() - st.mtimeMs;
+        return { raw, ageMs };
+      } catch {
+        return null;
+      }
+    };
+
+    if (!force) {
+      const cached = readCache();
+      if (cached && cached.ageMs < TTL_MS) {
+        return {
+          raw: cached.raw,
+          loadInfo: {
+            degraded: false,
+            warning: null,
+            source: "cache:fresh",
+          },
+        };
+      }
     }
 
-    const res = await fetch(DB_URL, {
-      headers: {
-        accept: "application/json",
-        "user-agent": "wynnhelperv3 (local)",
-      },
-    });
+    try {
+      const res = await fetch(DB_URL, {
+        headers: {
+          accept: "application/json",
+          "user-agent": "wynnhelperv3 (local)",
+        },
+      });
 
-    if (!res.ok) throw new Error(`DB fetch failed: HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`DB fetch failed: HTTP ${res.status}`);
 
-    const json = await res.json();
-    fs.writeFileSync(this.cacheFile, JSON.stringify(json));
-    return json;
+      const json = await res.json();
+      fs.writeFileSync(this.cacheFile, JSON.stringify(json));
+      return {
+        raw: json,
+        loadInfo: {
+          degraded: false,
+          warning: null,
+          source: "live",
+        },
+      };
+    } catch (err) {
+      const cached = readCache();
+      if (cached) {
+        const ageMins = Math.round(cached.ageMs / 60000);
+        return {
+          raw: cached.raw,
+          loadInfo: {
+            degraded: true,
+            warning: `Live DB fetch failed; using cached data (${ageMins}m old).`,
+            source: "cache:stale-fallback",
+          },
+        };
+      }
+      throw err;
+    }
   }
 }
