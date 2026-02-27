@@ -230,9 +230,13 @@ export async function buildApiRouter({ cacheDir }) {
   });
 
   router.post("/reload", async (_req, res) => {
-    cache.clear();
-    await db.load({ force: true });
-    res.json({ ok: true });
+    try {
+      await db.load({ force: true });
+      cache.clear();
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(503).json(dataUnavailableJson(e));
+    }
   });
 
   router.get("/search", async (req, res) => {
