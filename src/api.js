@@ -16,6 +16,11 @@ const GEAR_SLOT_KEYS = [
   { key: "weapon", slot: "weapon" },
 ];
 
+const DEFAULT_POOL_CAP = 80;
+const DEFAULT_RING_POOL_CAP = 140;
+const MAX_POOL_CAP = 250;
+const MAX_RING_POOL_CAP = 320;
+
 function stableKey(obj) {
   // stable stringify (enough for caching our request bodies)
   const seen = new Set();
@@ -274,6 +279,16 @@ export async function buildApiRouter({ cacheDir }) {
 
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
+    const poolCap = parseSafeNumber(body.poolCap, {
+      fallback: DEFAULT_POOL_CAP,
+      min: 10,
+      max: MAX_POOL_CAP,
+    });
+    const ringPoolCap = parseSafeNumber(body.ringPoolCap, {
+      fallback: DEFAULT_RING_POOL_CAP,
+      min: 10,
+      max: MAX_RING_POOL_CAP,
+    });
 
     const minImprove = parseOptionalSafeNumber(body.minImprove);
 
@@ -665,6 +680,16 @@ export async function buildApiRouter({ cacheDir }) {
 
     const mustGiveStatName = String(body.mustGiveStat ?? "");
     const mustGiveStat = mustGiveStatName ? SKI[mustGiveStatName] : null;
+    const poolCap = parseSafeNumber(body.poolCap, {
+      fallback: DEFAULT_POOL_CAP,
+      min: 10,
+      max: MAX_POOL_CAP,
+    });
+    const ringPoolCap = parseSafeNumber(body.ringPoolCap, {
+      fallback: DEFAULT_RING_POOL_CAP,
+      min: 10,
+      max: MAX_RING_POOL_CAP,
+    });
 
     const d = await db.load();
 
@@ -708,8 +733,8 @@ export async function buildApiRouter({ cacheDir }) {
       mustGiveStat,
       lockedBySlot: locked,
       tomes,
-      poolCap: 80,
-      ringPoolCap: 140,
+      poolCap,
+      ringPoolCap,
     });
 
     if (!best) return res.json({ ok: true, found: false });

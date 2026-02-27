@@ -39,6 +39,31 @@ function passesBaseFilters(it, ctx) {
   return true;
 }
 
+function scoreCandidate(it, ctx) {
+  let score = 0;
+
+  score -= (it.levelReq ?? 0) * 1.5;
+  score -= negSumArr(it.bonusArr ?? emptyArr()) * 8;
+
+  if (ctx.mustGiveStat != null) {
+    const idx = ctx.mustGiveStat;
+    const statBonus = it.slot === "weapon"
+      ? (it.bonusArr?.[idx] ?? 0)
+      : (it.bonusEffArr?.[idx] ?? 0);
+    if (statBonus > 0) score += 25 + statBonus * 4;
+  }
+
+  if (ctx.class) {
+    if (it.classReq && it.classReq === ctx.class) score += 8;
+    if (it.slot === "weapon") {
+      const wanted = weaponTypeForClass(ctx.class);
+      if (wanted && it.weaponType === wanted) score += 15;
+    }
+  }
+
+  return score;
+}
+
 export function solveBuild(db, ctx) {
   // ctx: { level, class, budget, lockedBySlot, tomes[], constraints..., objective... }
   // lockedBySlot: { helmet: item|null, ..., ring1, ring2 }
@@ -65,19 +90,23 @@ export function solveBuild(db, ctx) {
 
   for (const slot of ["helmet","chestplate","leggings","boots","necklace","bracelet","weapon"]) {
     if (locked[slot]) continue;
+    const cap = ctx.poolCap ?? 80;
     const pool = (db.bySlot.get(slot) ?? [])
       .filter((it) => !chosenNames.has(it.name))
       .filter((it) => passesBaseFilters(it, ctx))
-      .slice(0, ctx.poolCap ?? 80); // hard cap for performance
+      .sort((a, b) => scoreCandidate(b, ctx) - scoreCandidate(a, ctx))
+      .slice(0, cap); // hard cap for performance
     pools.set(slot, pool);
   }
 
   // rings (two picks) if not locked
   if (!ring1 || !ring2) {
+    const ringCap = ctx.ringPoolCap ?? 120;
     const pool = (db.bySlot.get("ring") ?? [])
       .filter((it) => !chosenNames.has(it.name))
       .filter((it) => passesBaseFilters(it, ctx))
-      .slice(0, ctx.ringPoolCap ?? 120);
+      .sort((a, b) => scoreCandidate(b, ctx) - scoreCandidate(a, ctx))
+      .slice(0, ringCap);
     pools.set("ring", pool);
   }
 
@@ -149,17 +178,15 @@ export function solveBuild(db, ctx) {
       return;
     }
 
-    // pick rings in a nested loop but capped
-    const poolLimited = pool.slice(0, 90);
     if (needR1 && needR2) {
-      for (let a = 0; a < poolLimited.length; a++) {
-        const rA = poolLimited[a];
+      for (let a = 0; a < pool.length; a++) {
+        const rA = pool[a];
         if (usedNames.has(rA.name)) continue;
         usedNames.add(rA.name);
         currentItems.push(rA);
 
-        for (let b = a + 1; b < poolLimited.length; b++) {
-          const rB = poolLimited[b];
+        for (let b = a + 1; b < pool.length; b++) {
+          const rB = pool[b];
           if (usedNames.has(rB.name)) continue;
           usedNames.add(rB.name);
           currentItems.push(rB);
@@ -177,7 +204,7 @@ export function solveBuild(db, ctx) {
     }
 
     // only one ring needed
-    for (const r of poolLimited) {
+    for (const r of pool) {
       if (usedNames.has(r.name)) continue;
       usedNames.add(r.name);
       currentItems.push(r);
