@@ -22,6 +22,9 @@ const MAX_POOL_CAP = 250;
 const MAX_RING_POOL_CAP = 320;
 const DEFAULT_SOLVE_MAX_NODES = 200000;
 const MAX_SOLVE_MAX_NODES = 2000000;
+const ALLOWED_CLASS_VALUES = ["warrior", "archer", "mage", "assassin", "shaman"];
+const ACCEPTED_CLASS_VALUES = [...ALLOWED_CLASS_VALUES, "", null];
+const ALLOWED_CLASS_SET = new Set(ALLOWED_CLASS_VALUES);
 
 function stableKey(obj) {
   // stable stringify (enough for caching our request bodies)
@@ -83,6 +86,20 @@ function parseOptionalSafeNumber(value, { min = -Infinity, max = Infinity, floor
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return null;
   return parseSafeNumber(parsed, { fallback: parsed, min, max, floor });
+}
+
+function parseClassValue(value) {
+  if (value == null) return { ok: true, value: null };
+  const normalized = String(value).toLowerCase().trim();
+  if (!normalized) return { ok: true, value: null };
+  if (!ALLOWED_CLASS_SET.has(normalized)) {
+    return {
+      ok: false,
+      error: "Invalid class",
+      acceptedValues: ACCEPTED_CLASS_VALUES,
+    };
+  }
+  return { ok: true, value: normalized };
 }
 
 function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
@@ -246,7 +263,9 @@ export async function buildApiRouter({ cacheDir }) {
     const slot = String(req.query.slot ?? "").trim();
     const mode = String(req.query.mode ?? "contains"); // contains | starts | fuzzy
     const level = parseSafeNumber(req.query.level, { fallback: 106, min: 1 });
-    const cls = String(req.query.class ?? "").toLowerCase().trim();
+    const clsParsed = parseClassValue(req.query.class);
+    if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
+    const cls = clsParsed.value;
 
     const strictWeaponClass = String(req.query.strictWeaponClass ?? "0") === "1";
 
@@ -256,7 +275,7 @@ export async function buildApiRouter({ cacheDir }) {
 
     if (slot) pool = pool.filter((x) => x.slot === slot);
 
-    const ctx = { level, class: cls || null, strictWeaponClass };
+    const ctx = { level, class: cls, strictWeaponClass };
     pool = pool.filter((it) => passesFilters(it, { ...ctx, minItemLevel: null }));
 
     let results = [];
@@ -288,7 +307,9 @@ export async function buildApiRouter({ cacheDir }) {
 
     const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const cls = String(body.class ?? "").toLowerCase().trim() || null;
+    const clsParsed = parseClassValue(body.class);
+    if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
+    const cls = clsParsed.value;
 
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
@@ -602,7 +623,9 @@ export async function buildApiRouter({ cacheDir }) {
 
     const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const cls = String(body.class ?? "").toLowerCase().trim() || null;
+    const clsParsed = parseClassValue(body.class);
+    if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
+    const cls = clsParsed.value;
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
@@ -692,7 +715,9 @@ export async function buildApiRouter({ cacheDir }) {
     const body = req.body ?? {};
     const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const cls = String(body.class ?? "").toLowerCase().trim() || null;
+    const clsParsed = parseClassValue(body.class);
+    if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
+    const cls = clsParsed.value;
     const strictWeaponClass = parseBool(body.strictWeaponClass, true);
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
