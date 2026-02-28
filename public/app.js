@@ -755,18 +755,46 @@ function wireTomeSearch() {
 
   let activeIdx = -1;
   let lastItems = [];
+  let requestSeq = 0;
+  let latestResultSeq = 0;
+  let inflightController = null;
 
   if (!input || !list) return;
 
   const close = () => {
     setVisible(list, false, "block");
+    list.classList.remove("loading", "error");
     activeIdx = -1;
     lastItems = [];
   };
 
+  const showListState = (text, cls) => {
+    list.innerHTML = "";
+    const statusRow = document.createElement("div");
+    statusRow.className = "suggestItem small";
+    if (cls) statusRow.classList.add(cls);
+    statusRow.textContent = text;
+    list.appendChild(statusRow);
+    setVisible(list, true, "block");
+  };
+
   async function doSearch() {
+    const seq = ++requestSeq;
     const q = input.value.trim();
-    if (!q) { close(); return; }
+
+    if (inflightController) inflightController.abort();
+    const controller = new AbortController();
+    inflightController = controller;
+
+    if (!q) {
+      close();
+      if (inflightController === controller) inflightController = null;
+      return;
+    }
+
+    list.classList.remove("error");
+    list.classList.add("loading");
+    showListState("Loading…", "loading");
 
     // tomes are stored as slot="tome" on backend, but /api/search expects slot
     const params = new URLSearchParams({
@@ -778,27 +806,51 @@ function wireTomeSearch() {
       strictWeaponClass: el("strictWeaponClass").value,
     });
 
-    const json = await apiJson(`/api/search?${params.toString()}`);
-    lastItems = json.results || [];
+    try {
+      const json = await apiJson(`/api/search?${params.toString()}`, { signal: controller.signal });
+      if (seq !== requestSeq) return;
 
-    list.innerHTML = "";
-    activeIdx = -1;
+      latestResultSeq = seq;
+      lastItems = json.results || [];
 
-    for (let i=0;i<lastItems.length;i++) {
-      const it = lastItems[i];
-      const div = makeSuggestItem(it);
-      div.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        if (!state.tomes.includes(it.name)) state.tomes.push(it.name);
-        input.value = "";
-        close();
-        renderTomes();
-        refresh();
-      });
-      list.appendChild(div);
+      if (!lastItems.length) {
+        showListState("No tomes found.", "empty");
+        activeIdx = -1;
+        return;
+      }
+
+      list.innerHTML = "";
+      activeIdx = -1;
+
+      for (let i = 0; i < lastItems.length; i++) {
+        const it = lastItems[i];
+        const div = makeSuggestItem(it);
+        div.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          if (!state.tomes.includes(it.name)) state.tomes.push(it.name);
+          input.value = "";
+          close();
+          renderTomes();
+          refresh();
+        });
+        list.appendChild(div);
+      }
+
+      setVisible(list, true, "block");
+    } catch (err) {
+      if (seq !== requestSeq) return;
+      if (err?.name === "AbortError") return;
+
+      close();
+      if (document.activeElement === input) {
+        list.classList.add("error");
+        showListState("Search failed. Try again.", "error");
+      }
+    } finally {
+      if (seq !== requestSeq) return;
+      if (inflightController === controller) inflightController = null;
+      list.classList.remove("loading");
     }
-
-    setVisible(list, Boolean(lastItems.length), "block");
   }
 
   let t = null;
@@ -810,6 +862,7 @@ function wireTomeSearch() {
   input.addEventListener("blur", () => setTimeout(close, 120));
 
   input.addEventListener("keydown", (e) => {
+    if (latestResultSeq !== requestSeq) return;
     if (!isVisible(list)) return;
     const items = Array.from(list.querySelectorAll(".suggestItem"));
     if (!items.length) return;
