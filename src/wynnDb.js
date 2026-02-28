@@ -184,7 +184,18 @@ export class WynnDb {
       if (!res.ok) throw new Error(`DB fetch failed: HTTP ${res.status}`);
 
       const json = await res.json();
-      fs.writeFileSync(this.cacheFile, JSON.stringify(json));
+      try {
+        fs.writeFileSync(this.cacheFile, JSON.stringify(json));
+      } catch {
+        return {
+          raw: json,
+          loadInfo: {
+            degraded: true,
+            warning: "Live data loaded but cache write failed.",
+            source: "live",
+          },
+        };
+      }
       return {
         raw: json,
         loadInfo: {
