@@ -146,6 +146,7 @@ function gatherPayload() {
 
     debug: el("debug").checked,
     debugLimit: Number(el("debugLimit").value),
+    maxNodes: Number(el("maxNodes")?.value),
   };
 }
 
@@ -923,8 +924,12 @@ async function solveBuild() {
       body: JSON.stringify(payload),
     });
 
+    const truncatedHint = json.truncated
+      ? " Search budget was reached; tighten filters or lock more slots for higher-quality results."
+      : "";
+
     if (!json.found) {
-      alert("Solver: no full build found with current locks/filters. Try loosening filters or locking fewer items.");
+      alert(`Solver: no full build found with current locks/filters. Try loosening filters or locking fewer items.${truncatedHint}`);
       return;
     }
 
@@ -946,7 +951,7 @@ async function solveBuild() {
     renderSlots();
     refresh();
 
-    alert(`Solver found build. Remaining SP: ${json.score.remaining} (neg tradeoffs: ${json.score.neg}).`);
+    alert(`Solver found build. Remaining SP: ${json.score.remaining} (neg tradeoffs: ${json.score.neg}).${truncatedHint}`);
   } catch (e) {
     alert(`Solver error: ${e.message || e}`);
   }

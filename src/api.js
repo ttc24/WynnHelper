@@ -20,6 +20,8 @@ const DEFAULT_POOL_CAP = 80;
 const DEFAULT_RING_POOL_CAP = 140;
 const MAX_POOL_CAP = 250;
 const MAX_RING_POOL_CAP = 320;
+const DEFAULT_SOLVE_MAX_NODES = 200000;
+const MAX_SOLVE_MAX_NODES = 2000000;
 
 function stableKey(obj) {
   // stable stringify (enough for caching our request bodies)
@@ -314,7 +316,6 @@ export async function buildApiRouter({ cacheDir }) {
       min: 10,
       max: MAX_RING_POOL_CAP,
     });
-
     const minImprove = parseOptionalSafeNumber(body.minImprove);
 
     const sortBy = String(body.sortBy ?? "bestRemaining"); // bestRemaining | lowestFinalSpend | lowestLevel | highestSTR... | leastNegative
@@ -718,6 +719,11 @@ export async function buildApiRouter({ cacheDir }) {
       min: 10,
       max: MAX_RING_POOL_CAP,
     });
+    const maxNodes = parseSafeNumber(body.maxNodes, {
+      fallback: DEFAULT_SOLVE_MAX_NODES,
+      min: 1000,
+      max: MAX_SOLVE_MAX_NODES,
+    });
 
     const d = await ensureDbData(res);
     if (!d) return;
@@ -753,7 +759,7 @@ export async function buildApiRouter({ cacheDir }) {
       if (it && it.slot === "tome") tomes.push(it);
     }
 
-    const best = solveBuild(d, {
+    const solveResult = solveBuild(d, {
       level, class: cls, strictWeaponClass,
       budget,
       allowedRarities, minItemLevel,
@@ -764,14 +770,27 @@ export async function buildApiRouter({ cacheDir }) {
       tomes,
       poolCap,
       ringPoolCap,
+      maxNodes,
     });
 
-    if (!best) return res.json({ ok: true, found: false, dataState: d.dataState });
+    const { best, truncated, nodesVisited } = solveResult;
+
+    if (!best) {
+      return res.json({
+        ok: true,
+        found: false,
+        dataState: d.dataState,
+        truncated,
+        meta: { nodesVisited, maxNodes },
+      });
+    }
 
     res.json({
       ok: true,
       found: true,
       dataState: d.dataState,
+      truncated,
+      meta: { nodesVisited, maxNodes },
       score: best.score,
       items: best.items.map((it) => ({ name: it.name, slot: it.slot, rarity: it.rarity, levelReq: it.levelReq })),
     });

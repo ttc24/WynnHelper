@@ -114,6 +114,9 @@ export function solveBuild(db, ctx) {
   const slotsToFill = Array.from(pools.keys()).sort((a, b) => (pools.get(a).length - pools.get(b).length));
 
   let best = null;
+  const maxNodes = Number.isFinite(Number(ctx.maxNodes)) ? Math.max(1, Math.floor(Number(ctx.maxNodes))) : Infinity;
+  let nodesVisited = 0;
+  let truncated = false;
 
   function scoreBuild(items) {
     const st = computeBuildStats(items, ctx.budget, { perSkillCap: 100 });
@@ -129,6 +132,12 @@ export function solveBuild(db, ctx) {
   }
 
   function rec(i, currentItems, usedNames) {
+    if (nodesVisited >= maxNodes) {
+      truncated = true;
+      return;
+    }
+    nodesVisited += 1;
+
     // prune: final budget lower bound (minFinalSpend) must be <= budget
     const stNow = computeBuildStats(currentItems, ctx.budget, { perSkillCap: 100 });
     if (stNow.finalSpend > ctx.budget) return;
@@ -216,5 +225,5 @@ export function solveBuild(db, ctx) {
 
   rec(0, lockedItems.slice(), new Set(chosenNames));
 
-  return best;
+  return { best, truncated, nodesVisited, maxNodes };
 }
