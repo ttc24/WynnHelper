@@ -22,6 +22,7 @@ const MAX_POOL_CAP = 250;
 const MAX_RING_POOL_CAP = 320;
 const DEFAULT_SOLVE_MAX_NODES = 200000;
 const MAX_SOLVE_MAX_NODES = 2000000;
+const DEFAULT_STRICT_WEAPON_CLASS = true;
 const ALLOWED_CLASS_VALUES = ["warrior", "archer", "mage", "assassin", "shaman"];
 const ACCEPTED_CLASS_VALUES = [...ALLOWED_CLASS_VALUES, "", null];
 const ALLOWED_CLASS_SET = new Set(ALLOWED_CLASS_VALUES);
@@ -102,6 +103,17 @@ function parseClassValue(value) {
   return { ok: true, value: normalized };
 }
 
+export function parseStrictWeaponClass(value) {
+  return parseBool(value, DEFAULT_STRICT_WEAPON_CLASS);
+}
+
+function parseSharedFilterParams(input, { strictDefault = DEFAULT_STRICT_WEAPON_CLASS } = {}) {
+  const level = parseSafeNumber(input.level, { fallback: 106, min: 1 });
+  const clsParsed = parseClassValue(input.class);
+  const strictWeaponClass = parseBool(input.strictWeaponClass, strictDefault);
+  return { level, clsParsed, strictWeaponClass };
+}
+
 function targetSlotKey(targetSlot, requestedKey, selectedItemsByKey, locks) {
   if (!targetSlot) return null;
 
@@ -142,7 +154,7 @@ function isTargetEntry(slotEntry, targetSlot, targetKey) {
   return true;
 }
 
-function passesFilters(it, ctx) {
+export function passesFilters(it, ctx) {
   if (it.levelReq > ctx.level) return false;
 
   if (ctx.class) {
@@ -262,12 +274,9 @@ export async function buildApiRouter({ cacheDir }) {
     const q = String(req.query.q ?? "").toLowerCase().trim();
     const slot = String(req.query.slot ?? "").trim();
     const mode = String(req.query.mode ?? "contains"); // contains | starts | fuzzy
-    const level = parseSafeNumber(req.query.level, { fallback: 106, min: 1 });
-    const clsParsed = parseClassValue(req.query.class);
+    const { level, clsParsed, strictWeaponClass } = parseSharedFilterParams(req.query);
     if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
     const cls = clsParsed.value;
-
-    const strictWeaponClass = String(req.query.strictWeaponClass ?? "0") === "1";
 
     const d = await ensureDbData(res);
     if (!d) return;
@@ -305,13 +314,10 @@ export async function buildApiRouter({ cacheDir }) {
   router.post("/compatible", async (req, res) => {
     const body = req.body ?? {};
 
-    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const { level, clsParsed, strictWeaponClass } = parseSharedFilterParams(body);
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const clsParsed = parseClassValue(body.class);
     if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
     const cls = clsParsed.value;
-
-    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
 
@@ -621,12 +627,10 @@ export async function buildApiRouter({ cacheDir }) {
     const locks = body.locks ?? {};
     const tomesSelected = Array.isArray(body.tomes) ? body.tomes.map(String) : [];
 
-    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const { level, clsParsed, strictWeaponClass } = parseSharedFilterParams(body);
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const clsParsed = parseClassValue(body.class);
     if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
     const cls = clsParsed.value;
-    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
     const minItemLevel = body.minItemLevel != null
@@ -713,12 +717,10 @@ export async function buildApiRouter({ cacheDir }) {
 
   router.post("/solve", async (req, res) => {
     const body = req.body ?? {};
-    const level = parseSafeNumber(body.level, { fallback: 106, min: 1 });
+    const { level, clsParsed, strictWeaponClass } = parseSharedFilterParams(body);
     const extraPoints = parseSafeNumber(body.extraPoints, { fallback: 0, min: 0 });
-    const clsParsed = parseClassValue(body.class);
     if (!clsParsed.ok) return res.status(400).json({ ok: false, error: clsParsed.error, acceptedValues: clsParsed.acceptedValues });
     const cls = clsParsed.value;
-    const strictWeaponClass = parseBool(body.strictWeaponClass, true);
     const budget = skillBudgetFromLevel(level) + extraPoints;
 
     const allowedRarities = Array.isArray(body.rarities) ? body.rarities.map(String) : null;
