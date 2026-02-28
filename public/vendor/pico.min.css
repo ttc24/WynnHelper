@@ -1,0 +1,22 @@
+/* Local fallback for Pico CSS v2-inspired base styles.
+   This file is intentionally vendored so the app remains usable offline. */
+:root{--pico-font-family:Inter,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;--pico-line-height:1.5;--pico-border-radius:.75rem;--pico-spacing:1rem;--pico-muted-color:#7a7f96;--pico-primary:#4f5dff;--pico-primary-hover:#3f4cff;--pico-background-color:#0b1220;--pico-color:#eef2ff;--pico-card-background-color:#101827;--pico-card-border-color:#243049;--pico-form-element-background-color:#1b2437;--pico-form-element-border-color:#2e3d5d;--pico-form-element-color:#eef2ff}
+*,:before,:after{box-sizing:border-box}
+html{font-size:100%;-webkit-text-size-adjust:100%}
+body{margin:0;font-family:var(--pico-font-family);line-height:var(--pico-line-height);color:var(--pico-color);background:var(--pico-background-color)}
+main{display:block}
+.container{width:min(1200px,100% - 2rem);margin-inline:auto}
+h1,h2,h3,h4,h5,h6{margin-top:0;margin-bottom:.75rem;line-height:1.2}
+p{margin-top:0;margin-bottom:var(--pico-spacing)}
+a{color:var(--pico-primary)}
+button,input,select,textarea{font:inherit;margin:0}
+button,input[type=submit],input[type=button]{cursor:pointer}
+button,[role=button],input[type=submit],input[type=button]{border:1px solid transparent;border-radius:var(--pico-border-radius);padding:.6rem .9rem;background:var(--pico-primary);color:#fff;transition:background .2s ease}
+button:hover,[role=button]:hover,input[type=submit]:hover,input[type=button]:hover{background:var(--pico-primary-hover)}
+button:disabled,input:disabled,select:disabled,textarea:disabled{opacity:.6;cursor:not-allowed}
+input,select,textarea{width:100%;padding:.55rem .7rem;border:1px solid var(--pico-form-element-border-color);border-radius:var(--pico-border-radius);background:var(--pico-form-element-background-color);color:var(--pico-form-element-color)}
+label{display:block;margin-bottom:.35rem}
+small{font-size:.875rem;color:var(--pico-muted-color)}
+article,.card{border:1px solid var(--pico-card-border-color);border-radius:var(--pico-border-radius);padding:var(--pico-spacing);background:var(--pico-card-background-color)}
+summary{cursor:pointer}
+[hidden]{display:none!important}
