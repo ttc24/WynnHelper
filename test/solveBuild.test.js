@@ -50,7 +50,7 @@ test("solveBuild keeps high-value item beyond index 80 when shortlist is scored"
     ]),
   };
 
-  const best = solveBuild(db, {
+  const result = solveBuild(db, {
     level: 106,
     budget: 0,
     mustGiveStat: 0,
@@ -61,6 +61,6 @@ test("solveBuild keeps high-value item beyond index 80 when shortlist is scored"
     ringPoolCap: 140,
   });
 
-  assert.ok(best, "solver should find a build");
-  assert.ok(best.items.some((it) => it.name === neededHelmet.name), "build should include the needed helmet");
+  assert.ok(result.best, "solver should find a build");
+  assert.ok(result.best.items.some((it) => it.name === neededHelmet.name), "build should include the needed helmet");
 });
